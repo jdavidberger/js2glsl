@@ -1,0 +1,20 @@
+{
+  "name": "js2glsl",
+  "version": "0.0.1",
+  "description": "An api which transpiles a subset of JS into GLSL",
+  "main": "js2glsl.js",
+  "scripts": {
+    "test": "mocha tests/index.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "escodegen": "^1.6.1",
+    "esprima": "^2.4.1",
+    "gl-shader": "^4.0.5",
+    "mocha": "^2.2.5",
+    "query-string": "^2.4.0",
+    "underscore": "^1.8.3",
+    "unit.js": "^2.0.0"
+  }
+}
