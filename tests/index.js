@@ -7,7 +7,7 @@ var ParseTokens = require('glsl-parser/direct')
 var test = {};
 
 test.isValidShader = function(shaderSpec){        
-var shader = shaderSpec.ShaderSource();            
+var shader = shaderSpec.vertex ? shaderSpec : shaderSpec.ShaderSource();            
     try {        
             {
                 var tokens = TokenString(shader.vertex);
@@ -46,7 +46,7 @@ try {
     var gl = canvas.getContext('webgl');
         
     test.isValidShader = function(shaderSpec){                
-        var shader = shaderSpec.ShaderSource();            
+        var shader = shaderSpec.vertex ? shaderSpec : shaderSpec.ShaderSource();            
         try {                           
                 createShader(gl,
                     shader.vertex,

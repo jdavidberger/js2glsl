@@ -8,7 +8,6 @@ if(parsed.n) {
     var idx = parseInt(parsed.n);
     var keys = Object.keys(shaders);
     if(idx >= 0 && idx < keys.length) { 
-        console.log(keys[idx]);
         example_setup(shaders[keys[idx]]);
     }
     else 

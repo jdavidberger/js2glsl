@@ -1,4 +1,5 @@
 var _ = require('underscore');
+var log = require('loglevel');
 
 function linkParents(ast) {    
     _.each(getChildren(ast), function(child) {        
@@ -42,7 +43,7 @@ function getChildren(astNode) {
                 return lst.concat(astNode.params);
             return lst;
         case 'ReturnStatement': 
-        case 'UnaryExpression':
+        case 'UnaryExpression':        
             return astNode.argument == undefined ? [] : [ astNode.argument ]; 
         case 'MemberExpression': return [ astNode.object, astNode.property ] ; 
         case 'VariableDeclaration': return astNode.declarations; 
@@ -50,11 +51,13 @@ function getChildren(astNode) {
         case 'ExpressionStatement': return [ astNode.expression ];
         case 'BinaryExpression':
         case 'AssignmentExpression': 
+        case 'LogicalExpression':        
             return [ astNode.left, astNode.right ]; 
         case 'Property': return [ astNode.value ] ;
         case 'ArrayExpression': return astNode.elements;
         case 'CallExpression': return [astNode.callee].concat(astNode.arguments);
         case 'SequenceExpression': return astNode.expressions;        
+        case 'ConditionalExpression': 
         case 'IfStatement': 
             if(astNode.alternate)
                 return [ astNode.test, astNode.consequent, astNode.alternate ];
@@ -63,6 +66,7 @@ function getChildren(astNode) {
         case 'Literal':    
         case 'ThisExpression':
         case '':
+        case 'EmptyStatement':
             return []; 
     }
     if(astNode.body && astNode.body.length !== undefined ) return astNode.body;
@@ -79,7 +83,7 @@ function getAllDescendants(ast) {
     try {
         return _.reduce( getChildren(ast), function(rtn, node) { return rtn.concat( getAllDescendants(node) ); }, [ ast ] ); 
     } catch(e) {    
-        console.log(ast);
+        log.info(ast);
         throw new Error(e.toString() + "\n from: " + ast.type + " -- " + ast.toString()); 
     }
 }
@@ -158,6 +162,10 @@ function hasType(type) {
     };
 }
 
+function getFunctionByName(allAst, name) {
+    return _.find(getAllNodes(allAst), function(n) { return n.type == "FunctionDeclaration" && n.id.name == name; });
+}
+
 module.exports = {
     getAllNodes: getAllNodes,
     getChildren: getChildren,
@@ -166,5 +174,6 @@ module.exports = {
     getDataTypeForId: getDataTypeForId,
     linkParents: linkParents,
     hasType: hasType,
-    getAllDescendants: getAllDescendants
+    getAllDescendants: getAllDescendants,
+    getFunctionByName: getFunctionByName
 }

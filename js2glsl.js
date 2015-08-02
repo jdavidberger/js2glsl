@@ -8,7 +8,8 @@ var rewrite = require('./libs/rewrite');
 var typeInference = require('./libs/typeInference'); 
 var ShaderSpecification = require('./libs/ShaderSpecification'); 
 
+var js2glsl = require("./core");
 
-module.exports = {
-    ShaderSpecification: ShaderSpecification
-};
+js2glsl.ShaderSpecification = ShaderSpecification;
+
+module.exports = js2glsl;

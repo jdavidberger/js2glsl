@@ -1,65 +1,77 @@
 var _ = require('underscore');
-
+var log = require('loglevel');
 var nodeUtils = require('./nodeUtils');
 var knownFunctions = require('./knownFunctions');
 
-function rewrite(astNode) {
+function rewrite(astNode, tabs) {
+    if(tabs === undefined)
+        tabs = 0; 
+    var tabString = " ".repeat(tabs * 8);         
     try {
         function handleChildren(delim) {
-            return _.map(nodeUtils.getChildren(astNode), rewrite).join(delim); 
+            return _.map(nodeUtils.getChildren(astNode), function(c) { return rewrite(c, tabs + 1); } ).join(delim); 
         };
         function handleBody() {
-            return ["{", handleChildren("\n"), "}" ].join("\n"); 
+            return [tabString + "{", handleChildren("\n"), tabString + "}" ].join("\n"); 
         };
+        if(astNode.left != undefined && astNode.right != undefined && astNode.operator != undefined) {
+               return "(" + rewrite(astNode.left) + " " + astNode.operator + " " + rewrite(astNode.right) + ")";         
+        }
+        
         switch(astNode.type) {
             case 'FunctionDeclaration':                 
                 return (astNode.id.dataType ? astNode.id.dataType : "void") + " " + 
                     astNode.id.name + "(" + 
-                        astNode.params.map(function(p) { return p.dataType + " " + p.name; }).join(",") + ")" + 
+                        astNode.params.map(function(p) { return p.dataType + " " + p.name; }).join(", ") + ")" + 
                             rewrite(astNode.body); 
+            case 'ThisExpression': return 'this';
             case 'Program': return handleChildren("\n"); 
             case 'BlockStatement': return handleBody(); 
             case 'ReturnStatement': 
                 if(astNode.argument)
-                    return "return " + rewrite(astNode.argument) + ";"; 
-                return "return;";
+                    return tabString + "return " + rewrite(astNode.argument) + ";"; 
+                return tabString + "return;";
             case 'MemberExpression': 
                 if(astNode.computed)
                     return rewrite(astNode.object) + "[" + rewrite(astNode.property) + "]"; 
                 return rewrite(astNode.object) + "." + rewrite(astNode.property) ; 
-            case 'VariableDeclaration': return handleChildren('\n'); 
+            case 'VariableDeclaration': return tabString + handleChildren('\n'); 
             case 'VariableDeclarator':                 
                 return nodeUtils.getDataType(astNode.id) + " " + rewrite(astNode.id) + "=" + rewrite(astNode.init) + ";"; 
-            case 'ExpressionStatement': return rewrite(astNode.expression) + ";";
+            case 'ExpressionStatement': return tabString + rewrite(astNode.expression) + ";";
             case 'AssignmentExpression':                 
-                return rewrite(astNode.left) + "=" + rewrite(astNode.right);             
-            case 'ArrayExpression': return "vec" + astNode.elements.length +  "(" + handleChildren(',') + ")"; 
+                return rewrite(astNode.left) + " = " + rewrite(astNode.right);             
+            case 'ArrayExpression': return "vec" + astNode.elements.length +  "(" + handleChildren(', ') + ")"; 
             case 'CallExpression':
                 return rewrite( astNode.callee ) + "(" + _.map(astNode.arguments, rewrite).join(', ') + ")"; 
-            case 'BinaryExpression':
-                return "(" + rewrite(astNode.left) + " " + astNode.operator + " " + rewrite(astNode.right) + ")";
             case 'Identifier':
                 return astNode.name; 
             case 'SequenceExpression': 
                 return handleChildren(";\n");
+            case 'ConditionalExpression': 
+                return rewrite(astNode.test) + " ? " + rewrite(astNode.consequent) + " : " + rewrite(astNode.alternate);
             case 'IfStatement': 
-                return [ "if(" + rewrite(astNode.test) + ")",
-                         rewrite(astNode.consequent), 
-                         astNode.alternate ? rewrite(astNode.alternate) : "" ].join("\n");
+                return [ tabString + "if(" + rewrite(astNode.test) + ") ",
+                         rewrite(astNode.consequent, tabs + 1), 
+                         astNode.alternate ? rewrite(astNode.alternate, tabs + 1) : "" ].join("\n");
             case 'Literal':
                 var appendPeriod = /^[0-9]*$/.exec(astNode.value);
                 if(appendPeriod && astNode.dataType && astNode.dataType.replace("/*?*/","") == 'float')
                     return astNode.value + ".";
                 return astNode.value;
             case 'UnaryExpression':
-                return astNode.operator + rewrite(astNode.argument);
+                return "(" + astNode.operator + rewrite(astNode.argument) + ")";
+            case 'rawSource':
+                return astNode.src;
             case '':
+            case 'ObjectExpression':
+            case 'EmptyStatement':
                 return ""; 
             default:
                 throw new Error("Cant rewrite type defined for " + astNode.type + " -- " + astNode.toString() );             
         }
     } catch(e) {
-        console.log(astNode);
+        log.info(astNode);
         throw e;         
     }
 };
@@ -97,10 +109,10 @@ function removeMemberRoot(ast, idNode, prefix) {
     the second one doesn't parse, so we turn it into the first one. 
 */
 rewrite.normalizeFunctionDeclaration = function(funSrc, newName) {
-    newName = newName || "_fun";
-    var matchFunction = /(function)\W*(\([\s\S]*)/g.exec(funSrc);
+    newName = newName || "_fun";    
+    var matchFunction = /(function)\W*[A-Za-z0-9_]*\W*(\([\s\S]*)/g.exec(funSrc)
     if(matchFunction) {
-        return matchFunction[1] + " " + newName + matchFunction[2]; 
+        return  "function " + newName + matchFunction[2]; 
     } else {
         return funSrc;
     }

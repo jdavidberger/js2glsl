@@ -7,21 +7,57 @@ function adjustableAxisShaderSpec() {
 adjustableAxisShaderSpec.prototype = Object.create(js2glsl.ShaderSpecification.prototype); 
 adjustableAxisShaderSpec.prototype.constructor = adjustableAxisShaderSpec;
 
-adjustableAxisShaderSpec.prototype.VertexPosition = function() {
-    var test = 10; 
-    return [this.getX(10), this.getY(), 0, 1.]; 
+var vp = adjustableAxisShaderSpec.prototype.VertexPosition = function() {
+    var test = 10;
+    var test2 = test + (-1);
+    return [this.getX(test2), this.getY(), 0, 1.]; 
 }
-adjustableAxisShaderSpec.prototype.FragmentColor = function() {
+var fc = adjustableAxisShaderSpec.prototype.FragmentColor = function() {
     return [1,1,1]; 
 }
-adjustableAxisShaderSpec.prototype.getX = function(m) {
+var getX = adjustableAxisShaderSpec.prototype.getX = function(m) {
     var test = [1,2,3];
     return this.attributes.position[0] * m;
 }
-adjustableAxisShaderSpec.prototype.getY = function() {
+var getY = adjustableAxisShaderSpec.prototype.getY = function() {
     return this.attributes.position[1];
 }
+
+var readmeEx2 = new js2glsl.ShaderSpecification();
+readmeEx2.getUV = function() {
+       return [this.attributes.position[0],
+               this.attributes.position[1]];
+};
+readmeEx2.VertexPosition = function () {
+    this.varyings.uv =  this.getUV();
+    return vec3(this.attributes.position[0],
+                this.attributes.position[1],
+                this.attributes.position[2]); 
+};
+readmeEx2.FragmentColor = function () {
+    return [0.5*(this.varyings.uv[0]+1.0), 
+            0.5*(this.varyings.uv[1]+1.0) , 
+            0.5*(Math.cos(this.uniforms.t)+1.0), 1.0]; 
+}
+
+function readmeEx1_VertexPosition() {
+            varyings.uv =  [attributes.position[0],
+                            attributes.position[1]];
+            return vec3(attributes.position[0],
+                        attributes.position[1],
+                        attributes.position[2]); 
+};
+
+function readmeEx1_FragmentColor() {
+            return [0.5*(varyings.uv[0]+1.0), 
+                    0.5*(varyings.uv[1]+1.0) , 
+                    0.5*(Math.cos(uniforms.t)+1.0), 1.0]; 
+};
+
 module.exports = {
+    readmeEx1: js2glsl({VertexPosition: readmeEx1_VertexPosition, FragmentColor: readmeEx1_FragmentColor}),
+    readmeEx2: readmeEx2,
+    altApi: js2glsl({VertexPosition: vp, FragmentColor: fc, getX: getX, getY: getY}),
     adjustableAxisShaderSpec: new adjustableAxisShaderSpec(),
     example1:  new js2glsl.ShaderSpecification(
         function () {
