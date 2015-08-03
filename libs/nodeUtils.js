@@ -47,7 +47,11 @@ function getChildren(astNode) {
             return astNode.argument == undefined ? [] : [ astNode.argument ]; 
         case 'MemberExpression': return [ astNode.object, astNode.property ] ; 
         case 'VariableDeclaration': return astNode.declarations; 
-        case 'VariableDeclarator': return [ astNode.id, astNode.init ]; 
+        case 'VariableDeclarator': 
+            var rtn = [ astNode.id ];
+            if(astNode.init)
+                rtn.push(astNode.init);
+            return rtn;
         case 'ExpressionStatement': return [ astNode.expression ];
         case 'BinaryExpression':
         case 'AssignmentExpression': 
@@ -163,7 +167,11 @@ function hasType(type) {
 }
 
 function getFunctionByName(allAst, name) {
-    return _.find(getAllNodes(allAst), function(n) { return n.type == "FunctionDeclaration" && n.id.name == name; });
+    return _.find(getAllNodes(allAst), function(n) { 
+                            return (n.type == "FunctionDeclaration" && n.id.name == name) || 
+                                   (n.type == "AssignmentExpression" && n.left.name == name && n.right.type == "FunctionExpression") ||
+                                   (n.type == "VariableDeclarator" && n.id.name == name && n.init);
+                            });
 }
 
 module.exports = {

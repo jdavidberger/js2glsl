@@ -1,6 +1,6 @@
 {
   "name": "js2glsl",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "An api which transpiles a subset of JS into GLSL",
   "main": "js2glsl.js",
   "scripts": {
@@ -8,6 +8,9 @@
   },
   "author": "Justin Berger",
   "license": "MIT",
+  "repository" : { 
+    "type" : "git", "url" : "https://github.com/jdavidberger/js2glsl"
+  },
   "dependencies": {
     "escodegen": "^1.6.1",
     "esprima": "^2.4.1",

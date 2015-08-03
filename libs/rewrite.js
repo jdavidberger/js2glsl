@@ -19,11 +19,6 @@ function rewrite(astNode, tabs) {
         }
         
         switch(astNode.type) {
-            case 'FunctionDeclaration':                 
-                return (astNode.id.dataType ? astNode.id.dataType : "void") + " " + 
-                    astNode.id.name + "(" + 
-                        astNode.params.map(function(p) { return p.dataType + " " + p.name; }).join(", ") + ")" + 
-                            rewrite(astNode.body); 
             case 'ThisExpression': return 'this';
             case 'Program': return handleChildren("\n"); 
             case 'BlockStatement': return handleBody(); 
@@ -35,10 +30,18 @@ function rewrite(astNode, tabs) {
                 if(astNode.computed)
                     return rewrite(astNode.object) + "[" + rewrite(astNode.property) + "]"; 
                 return rewrite(astNode.object) + "." + rewrite(astNode.property) ; 
-            case 'VariableDeclaration': return tabString + handleChildren('\n'); 
+            case 'VariableDeclaration': 
+                return tabString + handleChildren('\n'); 
             case 'VariableDeclarator':                 
-                return nodeUtils.getDataType(astNode.id) + " " + rewrite(astNode.id) + "=" + rewrite(astNode.init) + ";"; 
-            case 'ExpressionStatement': return tabString + rewrite(astNode.expression) + ";";
+                return nodeUtils.getDataType(astNode.id) + " " + rewrite(astNode.id) + 
+                    (astNode.init ? ("=" + rewrite(astNode.init)) : "") + ";"; 
+            case 'FunctionDeclaration':                 
+                return (astNode.id.dataType ? astNode.id.dataType : "void") + " " + 
+                    astNode.id.name + "(" + 
+                        astNode.params.map(function(p) { return p.dataType + " " + p.name; }).join(", ") + ")" + 
+                            rewrite(astNode.body);                 
+            case 'ExpressionStatement':                 
+                return tabString + rewrite(astNode.expression) + ";";
             case 'AssignmentExpression':                 
                 return rewrite(astNode.left) + " = " + rewrite(astNode.right);             
             case 'ArrayExpression': return "vec" + astNode.elements.length +  "(" + handleChildren(', ') + ")"; 
@@ -75,6 +78,7 @@ function rewrite(astNode, tabs) {
         throw e;         
     }
 };
+
 function rewriteFunctionAs(functionAst, newName) {
     var returnType = "void";
     if(functionAst.id.dataType !== undefined)
@@ -92,12 +96,12 @@ function removeMemberRoot(ast, idNode, prefix) {
     
     var id = idNode.name || idNode;     
     _.chain(nodeUtils.getAllNodes(ast)).filter( function(node) {
-        return node.type == "MemberExpression" && ( (node.object.type == "Identifier" && node.object.name == id ) ||
-                                                    (node.object.type == "ThisExpression" && id == "this") );
-    }).each(function(node) {
-        node.type = node.property.type; 
-        node.name = prefix + node.property.name; 
-        node.computed = node.object = node.property = undefined; 
+        if(node.type == "MemberExpression" && ( (node.object.type == "Identifier" && node.object.name == id ) ||
+                                                (node.object.type == "ThisExpression" && id == "this") )){            
+            node.type = node.property.type; 
+            node.name = prefix + node.property.name; 
+            node.computed = node.object = node.property = undefined; 
+        }
     }); 
 }
 
@@ -117,6 +121,61 @@ rewrite.normalizeFunctionDeclaration = function(funSrc, newName) {
         return funSrc;
     }
 }; 
+
+rewrite.normalizeFunctionExpressions = function(allAst) {
+    _.chain( nodeUtils.getAllNodes(allAst) )
+     .filter( function(n) {
+        return n.type == "VariableDeclarator" && n.init && n.init.type == "FunctionExpression";
+     })
+     .each( function(n) {
+        var p = n; 
+        while(p != undefined && p.body === undefined) {
+            p = p.parent; 
+        }
+        p.body.push( {
+             "type": "FunctionDeclaration",
+            "id": n.id,
+            "params": n.init.params,
+            "defaults": n.init.defaults,            
+            "body": n.init.body 
+        }); 
+        n.type = '';        
+        n.id = n.init = null;
+     });
+
+    _.chain( nodeUtils.getAllNodes(allAst) )
+     .each( function(n) {
+        if ((n.type == "AssignmentExpression" && n.right && n.right.type == "FunctionExpression") == false) {
+            return; 
+        }
+        var oldVarNode = _.chain( nodeUtils.getNodesWithIdInScope(n, n.left.name) )
+         .map(function (n) { return n.parent; })
+         .find( function(n) {
+            return n.type == "VariableDeclarator";
+         }).value();
+         
+         if(oldVarNode)
+            oldVarNode.type = "";
+
+        var p = n; 
+        while(p != undefined && p.body === undefined) {
+            p = p.parent; 
+        }
+        p.body.push( {
+             "type": "FunctionDeclaration",
+            "id": n.left,
+            "params": n.right.params,
+            "defaults": n.right.defaults,            
+            "body": n.right.body 
+        }); 
+        n.type = '';        
+        n.id = n.right = n.left = null;
+     });
+     
+     
+     nodeUtils.linkParents(allAst);    
+}
+
 rewrite.addIdPrefix = function(node, prefix) {
     _.chain(nodeUtils.getNodesWithIdInScope(node, node))
         .each(function(node) {

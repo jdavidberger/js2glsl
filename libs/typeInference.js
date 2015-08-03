@@ -17,7 +17,7 @@ var log = require('loglevel');
 */
 function setDataType(node, dataType, singleNode) {    
     if(dataType.indexOf("/*?*/") >= 0) {
-        log.warn("Warning: Guessing " + dataType + " for '" + rewrite(node) + "'");         
+        log.info("Guessing " + dataType + " for '" + rewrite(node) + "'");         
     }
     
     // If the node already has a dataType, we are just checking for equivalence
@@ -85,7 +85,7 @@ function inferTypes( rootNode ) {
         if(knownFunction) {                
             nodesToProcess = nodesToProcess.concat(setDataType(node, knownFunction.rtnType));
             if(knownFunction.argTypes.length !== node.arguments.length) {
-                throw new Error(node.callee.name + " should have " + knownFunction.argTypes.length + " arguments, it has " + node.arguments.length); 
+                throw new Error(rewrite(node.callee) + " should have " + knownFunction.argTypes.length + " arguments, it has " + node.arguments.length); 
             }            
             for(var i = 0;i < knownFunction.argTypes.length;i++) {
                 nodesToProcess = nodesToProcess.concat(setDataType(node.arguments[i], knownFunction.argTypes[i]));
@@ -145,7 +145,7 @@ function inferTypes( rootNode ) {
 
         /***** Push up inferences -- inferences that are based on the parent node, and push up to that parent.  */
         if(parentNode) {
-            if(parentNode.type == 'VariableDeclarator') {
+            if(parentNode.type == 'VariableDeclarator' && parentNode.init) {
                 nodesToProcess = nodesToProcess.concat( syncDataType(parentNode.id, parentNode.init) );            
             } else if(parentNode.type == 'CallExpression' && parentNode.callee == node) {
                 nodesToProcess = nodesToProcess.concat( syncDataType(node, parentNode) );                 
@@ -180,7 +180,11 @@ function inferTypes( rootNode ) {
                 var p = parentNode; 
                 while(p != undefined && p.type != "FunctionDeclaration" && p.type != "FunctionExpression" ) {
                     p = p.parent; 
-                }            
+                }    
+                if(p && p.type == "FunctionExpression") {
+                    p = p.parent; 
+                }
+                    
                 if(p) {
                     nodesToProcess = nodesToProcess.concat( syncDataType(p.id, parentNode.argument) );                 
                     log.info("Deducing " + p.id.name + " as " + p.id.dataType + " from the return type " + rewrite(parentNode.argument));

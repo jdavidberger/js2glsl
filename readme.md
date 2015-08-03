@@ -7,6 +7,13 @@ JS2GLSL is a library that turns javascript into GLSL source. The goal is to allo
 
 http://jdavidberger.github.io/js2glsl-shadertoy/
 
+# Demos
+
+- [Basic Example](http://jdavidberger.github.io/js2glsl-shadertoy/#2fcbd5717fecca625398)
+- [Advanced Example](http://jdavidberger.github.io/js2glsl-shadertoy/#8ec0f81132238b7c4128)
+- [CoffeeScript Advanced Example](http://jdavidberger.github.io/js2glsl-shadertoy/#cbcf1f2ba66c0f8e1857)
+- [CoffeeScript Basic Example](http://jdavidberger.github.io/js2glsl-shadertoy/#9c88c6ec1f4f964d1e96)
+
 # Basic Example
 ````
 var js2glsl = require('js2glsl'); 

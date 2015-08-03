@@ -115,6 +115,21 @@ function deobjectify(ast, name) {
     }
 };
 
+function deModularize(ast) {
+    if( ast.type == "Program") {
+            for(var i = 0;i < ast.body.length;i++) {
+                if(ast.body[i].type == "ExpressionStatement" &&
+                    ast.body[i].expression.type == "CallExpression" &&
+                    ast.body[i].expression.callee.type == "MemberExpression" &&
+                    ast.body[i].expression.callee.object.type == "FunctionExpression" &&
+                    ast.body[i].expression.arguments.length == 1 &&
+                    ast.body[i].expression.arguments[0].type == "ThisExpression") {
+                ast.body[i] = ast.body[i].expression.callee.object.body; 
+                //ast.body = ast.body.concat(ast.body[i].expression.callee.object.body); 
+            }
+        }
+    }
+}
 
 function getSource(allAst, KnownFunctionSources) {
     if(typeof(allAst ) == 'string') {        
@@ -131,9 +146,21 @@ function getSource(allAst, KnownFunctionSources) {
             rewrite.removeMemberRoot(allAst, "this");           
     }
     KnownFunctionSources = KnownFunctionSources || knownFunctions.knownFunctionsSource;
-   var varyingsTempName = "1_varyings";
+   
+    deModularize(allAst); 
+    nodeUtils.linkParents(allAst); 
 
-   nodeUtils.linkParents(allAst); 
+    rewrite.normalizeFunctionExpressions(allAst);    
+    
+   var varyingsTempName = "1_varyings";
+   
+    var glPositionAst = nodeUtils.getFunctionByName(allAst, "VertexPosition");
+    var glColorAst    = nodeUtils.getFunctionByName(allAst, "FragmentColor");    
+    
+    if(glPositionAst === undefined)
+        throw new Error("Could not find a definition for 'VertexPosition'; this is a required function."); 
+    if(glColorAst === undefined)
+        throw new Error("Could not find a definition for 'FragmentColor'; this is a required function.");             
     
     var attributes = gatherObjectProperties(allAst, "attributes");    
     var varyings   = gatherObjectProperties(allAst, "varyings");         
@@ -148,16 +175,12 @@ function getSource(allAst, KnownFunctionSources) {
             rewrite.addIdPrefix(node.id, "_local_"); 
         }); 
     
-    rewrite.removeIdPrefix(allAst, "attributes_");
+    rewrite.removeIdPrefix(allAst, "attributes_");    
     rewrite.removeIdPrefix(allAst, "uniforms_");    
-    
-    var glPositionAst = _.find(nodeUtils.getAllDescendants(allAst), function(n) { return n.type == "FunctionDeclaration" && n.id.name == "VertexPosition"; });
-    var glColorAst = _.find(nodeUtils.getAllDescendants(allAst), function(n) { return n.type == "FunctionDeclaration" && n.id.name == "FragmentColor"; });
-    
-    if(glPositionAst === undefined)
-        throw new Error("Could not find a definition for 'VertexPosition'; this is a required function."); 
-    if(glColorAst === undefined)
-        throw new Error("Could not find a definition for 'FragmentColor'; this is a required function.");     
+       
+    //var glPositionAst = _.find(nodeUtils.getAllDescendants(allAst), function(n) { return n.type == "FunctionDeclaration" && n.id.name == "VertexPosition"; });
+    //var glColorAst = _.find(nodeUtils.getAllDescendants(allAst), function(n) { return n.type == "FunctionDeclaration" && n.id.name == "FragmentColor"; });
+        
     glPositionAst.id.dataTypeHint = "vec4";
     glColorAst.id.dataTypeHint = "vec4";
     typeInference.inferTypes(allAst); 
