@@ -15,7 +15,7 @@ http://jdavidberger.github.io/js2glsl-shadertoy/
 - [CoffeeScript Basic Example](http://jdavidberger.github.io/js2glsl-shadertoy/#9c88c6ec1f4f964d1e96)
 
 # Basic Example
-````
+````javascript
 var js2glsl = require('js2glsl'); 
 
 function VertexPosition() {
@@ -39,7 +39,7 @@ console.log(shaderSrc.fragment);
 ````
 
 # Object-Oriented Example
-````
+````javascript
 var js2glsl = require('js2glsl'); 
 
 var shaderSpec = new js2glsl.ShaderSpecification();
