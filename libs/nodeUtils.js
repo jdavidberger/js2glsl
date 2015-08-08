@@ -70,6 +70,7 @@ function getChildren(astNode) {
         case 'Literal':    
         case 'ThisExpression':
         case '':
+    case 'rawSource':
         case 'EmptyStatement':
             return []; 
     }

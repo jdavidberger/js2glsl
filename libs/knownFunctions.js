@@ -96,8 +96,8 @@ function remapFunctions( ast, _this ) {
         if(rewriteFunction && rewriteFunction.transform) // No transform function means its fine as-is
             rewriteFunction.transform(node); 
         else if(rewriteFunction === undefined)
-            throw new Error("Currently functions must be on a white list to be acceptable. " + rewrite(node.callee)   + " isn't on it.\n" +
-                            "Available are: " + _.map(knownFunctions, function(x) { return x.name + "(" + x.argTypes.join(",") + ")"; }).join(",\r\n") + ".");
+            node.error = new Error("Currently functions must be on a white list to be acceptable. " + rewrite(node.callee)   + " isn't on it.\n" +
+                                   "Available are: " + _.map(knownFunctions, function(x) { return x.name + "(" + x.argTypes.join(",") + ")"; }).join(",\r\n") + ".");
     });
 };
 

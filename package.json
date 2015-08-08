@@ -8,8 +8,9 @@
   },
   "author": "Justin Berger",
   "license": "MIT",
-  "repository" : { 
-    "type" : "git", "url" : "https://github.com/jdavidberger/js2glsl"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jdavidberger/js2glsl"
   },
   "dependencies": {
     "escodegen": "^1.6.1",
@@ -19,6 +20,7 @@
     "mocha": "^2.2.5",
     "query-string": "^2.4.0",
     "underscore": "^1.8.3",
-    "unit.js": "^2.0.0"
+    "unit.js": "^2.0.0",
+    "weakmap": "0.0.6"
   }
 }

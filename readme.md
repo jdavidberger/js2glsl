@@ -5,7 +5,7 @@ JS2GLSL is a library that turns javascript into GLSL source. The goal is to allo
 
 # Try it 
 
-http://jdavidberger.github.io/js2glsl-shadertoy/
+[On-line Demo](http://jdavidberger.github.io/js2glsl-shadertoy/)
 
 # Demos
 

@@ -156,6 +156,9 @@ function getSource(allAst, KnownFunctionSources) {
    
     var glPositionAst = nodeUtils.getFunctionByName(allAst, "VertexPosition");
     var glColorAst    = nodeUtils.getFunctionByName(allAst, "FragmentColor");    
+
+    glPositionAst.params = [];
+    glColorAst.params = [];
     
     if(glPositionAst === undefined)
         throw new Error("Could not find a definition for 'VertexPosition'; this is a required function."); 
@@ -267,6 +270,15 @@ function getSource(allAst, KnownFunctionSources) {
         }
         return rtn;
     };
+        
+    getUsedFunctions(glPositionAst)
+    .concat(getUsedFunctions(glColorAst))
+    .forEach( function(node) {
+        nodeUtils.getAllDescendants(node).forEach(function(node) {
+            if(node.error)
+                throw node.error;
+        });
+    }); 
     
     var vertex = [
         "precision mediump float;",        
@@ -293,7 +305,8 @@ function getSource(allAst, KnownFunctionSources) {
          colorLine,
          "}"    
     ].join('\n'); 
-    
+
+    console.log(vertex, fragment);
     return {
         vertex: vertex,
         fragment: fragment
