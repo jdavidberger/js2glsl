@@ -30,7 +30,8 @@ var builtins = [
     new Shared("min", [ "float", "float" ]), 
     new Shared("max", [ "float", "float" ]),
     new Builtin("atan", Math.atan2, [ "float", "float" ]),
-    new Builtin("texture2D", undefined, [ 'sampler2D', 'vec2' ], 'vec4')
+    new Builtin("texture2D", undefined, [ 'sampler2D', 'vec2' ], 'vec4'),
+    new Builtin("mod", undefined, [ 'float', 'float' ], 'float')
 ];
 
 
