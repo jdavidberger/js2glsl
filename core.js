@@ -175,7 +175,7 @@ function getSource(allAst, KnownFunctionSources) {
 
     _.chain(nodeUtils.getAllNodes(allAst)).filter(nodeUtils.hasType("VariableDeclarator"))
         .each(function(node) {
-            rewrite.addIdPrefix(node.id, "_local_"); 
+            rewrite.addIdPrefix(node.id, "_local"); 
         }); 
     
     rewrite.removeIdPrefix(allAst, "attributes_");    
@@ -244,11 +244,20 @@ function getSource(allAst, KnownFunctionSources) {
                         ", 1.0);"; 
     }   
     
+    var glPointSizeAst = getFunctionByName('PointSize');
+    var pointSizeLine = "";
+    if(glPointSizeAst) {
+	pointSizeLine = "\tgl_PointSize = PointSize();";
+    }
+
     function getFunctionByName(name) {
         return _.find(nodeUtils.getAllNodes(allAst), function(n) { return n.type == "FunctionDeclaration" && n.id.name == name; });
     }
     
     function getUsedFunctions(node, alreadySeen) {
+	if(node === undefined)
+	    return [];
+
         alreadySeen = alreadySeen || {};
         alreadySeen[node.id.name] = 1; 
         var callNames = _.chain(nodeUtils.getAllDescendants(node)).filter(function (n) {
@@ -288,8 +297,10 @@ function getSource(allAst, KnownFunctionSources) {
         generateFields(allAst, "uniform", uniforms).trim(),
         "",
         getUsedFunctions(glPositionAst).map(rewrite).join("\n"),                      
+        getUsedFunctions(glPointSizeAst).map(rewrite).join("\n"),                      
         "void main() {",        
         positionLine,
+	pointSizeLine,
         "}", 
       ].join('\n'); 
 

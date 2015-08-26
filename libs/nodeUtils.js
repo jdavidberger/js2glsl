@@ -1,5 +1,64 @@
 var _ = require('underscore');
 var log = require('loglevel');
+/**
+    Set the data type for a give node. 
+    
+    This will throw an error if the inferred type contradicts an already set type. 
+    
+    @param node node to assign
+    @param dataType type to assign
+    @param singleNode whether to only apply to the given node, or to also assign to all equivalent id'd nodes in scope. (Used internally)
+    @return A list of every node that had its dataType set due to this operation.     
+*/
+function setDataType(node, dataType, singleNode) {    
+    var rewrite = require('./rewrite'); 	    
+    
+    // If the node already has a dataType, we are just checking for equivalence
+    if(node.dataType) {
+        // Remove the 'guess' annotation
+        function rawType(dt) {
+            return dt.replace("/*?*/","");
+        }
+        if(rawType(node.dataType) != rawType(dataType)) {  
+            throw new Error("Type inference failed for '" + rewrite(node) + "'. Resolved as both " + node.dataType + " and now " + dataType);
+        }
+        
+        // MUST RETURN EMPTY or we could loop forever
+        return []; 
+    } else {        
+        if(node.name && !singleNode) {
+            // This recursive invocation is _probably_ (certainly?) redundant, but we do it anyway to rerun the inference check. 
+            _.each(getNodesWithIdInScope(node, node.name), function(node) {
+                setDataType(node, dataType, true);
+            });
+            return getNodesWithIdInScope(node, node.name);
+        } else {
+            node.dataType = dataType;
+            return [node];
+        }        
+    }
+};
+
+/** 
+    Makes nodeA and nodeB share a type. 
+    @return Any and all changed nodes @seealso setDataType
+*/
+function syncDataType(nodeA, nodeB, msg) {
+    var changed = []; 
+    if(nodeA.dataType !== undefined) {
+        changed = setDataType(nodeB, nodeA.dataType);
+    }
+    if(nodeB.dataType !== undefined && changed.length == 0) {
+        changed = setDataType(nodeA, nodeB.dataType);
+    }
+    msg = msg || "<unmarked reason>"; 
+    if(changed.length){
+	var rewrite = require('./rewrite'); 
+	console.log("Syncing " + rewrite(nodeA) + " <-> " + rewrite(nodeB) + " to " + nodeA.dataType + " for " + msg);
+    }
+    return changed; 
+}
+
 
 function linkParents(ast) {    
     _.each(getChildren(ast), function(child) {        
@@ -184,5 +243,7 @@ module.exports = {
     linkParents: linkParents,
     hasType: hasType,
     getAllDescendants: getAllDescendants,
-    getFunctionByName: getFunctionByName
+    getFunctionByName: getFunctionByName,
+    setDataType: setDataType,
+    syncDataType: syncDataType
 }

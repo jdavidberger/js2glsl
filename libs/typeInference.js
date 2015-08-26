@@ -5,65 +5,9 @@ var knownFunctions = require('./knownFunctions');
 var rewrite = require('./rewrite'); 
 var log = require('loglevel');
 
-/**
-    Set the data type for a give node. 
-    
-    This will throw an error if the inferred type contradicts an already set type. 
-    
-    @param node node to assign
-    @param dataType type to assign
-    @param singleNode whether to only apply to the given node, or to also assign to all equivalent id'd nodes in scope. (Used internally)
-    @return A list of every node that had its dataType set due to this operation.     
-*/
-function setDataType(node, dataType, singleNode) {    
-    if(dataType.indexOf("/*?*/") >= 0) {
-        log.info("Guessing " + dataType + " for '" + rewrite(node) + "'");         
-    }
-    
-    // If the node already has a dataType, we are just checking for equivalence
-    if(node.dataType) {
-        // Remove the 'guess' annotation
-        function rawType(dt) {
-            return dt.replace("/*?*/","");
-        }
-        if(rawType(node.dataType) != rawType(dataType)) {  
-            throw new Error("Type inference failed for '" + rewrite(node) + "'. Resolved as both " + node.dataType + " and now " + dataType);
-        }
-        
-        // MUST RETURN EMPTY or we could loop forever
-        return []; 
-    } else {        
-        if(node.name && !singleNode) {
-            // This recursive invocation is _probably_ (certainly?) redundant, but we do it anyway to rerun the inference check. 
-            _.each(nodeUtils.getNodesWithIdInScope(node, node.name), function(node) {
-                setDataType(node, dataType, true);
-            });
-            return nodeUtils.getNodesWithIdInScope(node, node.name);
-        } else {
-            node.dataType = dataType;
-            return [node];
-        }        
-    }
-};
+var syncDataType = nodeUtils.syncDataType;
+var setDataType  = nodeUtils.setDataType; 
 
-/** 
-    Makes nodeA and nodeB share a type. 
-    @return Any and all changed nodes @seealso setDataType
-*/
-function syncDataType(nodeA, nodeB, msg) {
-    var changed = []; 
-    if(nodeA.dataType !== undefined) {
-        changed = setDataType(nodeB, nodeA.dataType);
-    }
-    if(nodeB.dataType !== undefined && changed.length == 0) {
-        changed = setDataType(nodeA, nodeB.dataType);
-    }
-    msg = msg || "<unmarked reason>"; 
-    if(changed.length){
-	console.log("Syncing " + rewrite(nodeA) + " <-> " + rewrite(nodeB) + " to " + nodeA.dataType + " for " + msg);
-    }
-    return changed; 
-}
 /**
     Attempts to assign a dataType to every l-value in the AST
 */
@@ -84,13 +28,7 @@ function inferTypes( rootNode ) {
     }).each(function( node ) {            
         var knownFunction = knownFunctions.getKnownFunction(node);        
         if(knownFunction) {                
-            nodesToProcess = nodesToProcess.concat(setDataType(node, knownFunction.rtnType));
-            if(knownFunction.argTypes.length !== node.arguments.length) {
-                throw new Error(rewrite(node.callee) + " should have " + knownFunction.argTypes.length + " arguments, it has " + node.arguments.length); 
-            }            
-            for(var i = 0;i < knownFunction.argTypes.length;i++) {
-                nodesToProcess = nodesToProcess.concat(setDataType(node.arguments[i], knownFunction.argTypes[i]));
-            }
+            nodesToProcess = nodesToProcess.concat(knownFunction.inferTypes(node));
         }
         
         if(knownFunction === undefined) {                
@@ -222,7 +160,7 @@ function inferTypes( rootNode ) {
 	    // you have two unknown sized vecs that are set to be equal, it always ends up assigning the larger size. 
 	    for(var i = 0;i < nodesWithDataTypeMinSizes.length && nodesToProcess.length == 0;i++) {
 		var node = nodesWithDataTypeMinSizes[i]; 
-		console.log( rewrite(node) + " max seen index"); 
+		console.log( rewrite(node) + " max seen index --" + nodeUtils.getDataTypeForId(node, node) ); 
                 nodesToProcess = nodesToProcess.concat( setDataType(node, nodeUtils.getDataTypeForId(node, node)) ); 
  	    }
         }

@@ -12,6 +12,16 @@ var renameFunction = function(newName) {
                       };
     };
 };
+var markType  = function(node) {
+    var replacementNode = node.arguments[1];
+    node.type = 'SequenceExpression';
+    node.expressions = [ node.arguments[1] ];
+    node.arguments = node.callee = undefined; 
+};
+var castTypeInference = function(node) {
+    var dataType = node.arguments[0].value;
+    return nodeUtils.setDataType(node, dataType).concat(nodeUtils.setDataType(node.arguments[1], dataType));
+}
 
 var makeInfix = function(infix) {
     return function(node) {
@@ -30,6 +40,20 @@ function KnownFunction( name, argTypes, rtnType, transform, src ) {
     this.transform = transform; 
     this.src = src;
 };
+KnownFunction.prototype.toString = function() {
+    return this.name + "(" + this.argTypes.join(",") + ")";
+}
+
+KnownFunction.prototype.inferTypes = function(node) {
+    var rtn = nodeUtils.setDataType(node, this.rtnType);
+    if(this.argTypes.length !== node.arguments.length) {
+        throw new Error(rewrite(node.callee) + " should have " + this.argTypes.length + " arguments, it has " + node.arguments.length); 
+    }            
+    for(var i = 0;i < this.argTypes.length;i++) 
+        rtn = rtn.concat(nodeUtils.setDataType(node.arguments[i], this.argTypes[i]));
+    return rtn;
+}
+
 function MemberFunction( name, fn ) {
     this.name = name;
     this.fn = fn; 
@@ -41,14 +65,26 @@ var knownFunctionsSource = {
     "_mat4_multiplyVec3": "vec3 _mat4_multiplyVec3(mat4 m, vec3 v) { return (m * vec4(v, 1.0)).xyz; }"
 };
 var knownFunctions = [
+    { name: "builtIns.asType", inferTypes: castTypeInference, transform: markType },
     new KnownFunction("mat4.multiplyVec3", ['mat4', 'vec3'], 'vec3', renameFunction("_mat4_multiplyVec3" )),
     new KnownFunction("vec3.scale", ['vec3', 'float'], 'vec3', makeInfix("*") ),   
     new KnownFunction("vec2", ['float','float'], 'vec2' ),
     new KnownFunction("vec3", ['float','float','float'], 'vec3' ),
     new KnownFunction("vec4", ['float','float','float','float'], 'vec4' ),
-    new KnownFunction("Math.atan2", ['float','float'], 'float', renameFunction("atan") )
+    new KnownFunction("Math.atan2", ['float','float'], 'float', renameFunction("atan") ),
+
+    new KnownFunction("builtIns.multVecs2", [ 'vec2', 'vec2' ], 'vec2', makeInfix("*")),
+    new KnownFunction("builtIns.multVecs3", [ 'vec3', 'vec3' ], 'vec3', makeInfix("*")),
+    new KnownFunction("builtIns.multVecs4", [ 'vec4', 'vec4' ], 'vec4', makeInfix("*")),
+
+    new KnownFunction("builtIns.addVecs2", [ 'vec2', 'vec2' ], 'vec2', makeInfix("+")),
+    new KnownFunction("builtIns.addVecs3", [ 'vec3', 'vec3' ], 'vec3', makeInfix("+")),
+    new KnownFunction("builtIns.addVecs4", [ 'vec4', 'vec4' ], 'vec4', makeInfix("+")),
+
+    new KnownFunction("builtIns.multMat4", [ 'mat4', 'vec4' ], 'vec4', makeInfix("*")),
+    new KnownFunction("builtIns.multMat3", [ 'mat3', 'vec3' ], 'vec3', makeInfix("*"))
 ].concat(WebGL.MetaBuiltins.map( function(f) {
-    return new KnownFunction( "this." + f.name, f.argTypes, f.rtnType, renameFunction(f.name) )
+    return new KnownFunction( "builtIns." + f.name, f.argTypes, f.rtnType, renameFunction(f.name) )
 })).concat(WebGL.MetaBuiltins.filter( function(f) {    
     return f.constructor.name == "Shared";
 }).map(function(f) {
@@ -97,7 +133,7 @@ function remapFunctions( ast, _this ) {
             rewriteFunction.transform(node); 
         else if(rewriteFunction === undefined)
             node.error = new Error("Currently functions must be on a white list to be acceptable. " + rewrite(node.callee)   + " isn't on it.\n" +
-                                   "Available are: " + _.map(knownFunctions, function(x) { return x.name + "(" + x.argTypes.join(",") + ")"; }).join(",\r\n") + ".");
+                                   "Available are: " + _.map(knownFunctions, function(x) { return x.toString() }).join(",\r\n") + "."  );
     });
 };
 
