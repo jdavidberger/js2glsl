@@ -180,7 +180,35 @@ function inferTypes( rootNode ) {
        
         
     }
+
+    _.chain(allNodes).filter(function(node) {
+        return node.type == "ForStatement";
+    }).each(function (node ) {        
+	markRHSConstant(node.init);
+	markRHSConstant(node.test); 
+    });
+
 } 
+
+function markRHSConstant(astNode) {
+    switch(astNode.type) {
+	case 'Identifier': 
+	_.each(nodeUtils.getNodesWithIdInScope(astNode, astNode.name), function(node) {
+	    node.isConst = true; 
+	});
+	return;
+	case 'UnaryExpression':
+	return markRHSConstant(astNode.argument); 
+	case 'VariableDeclarator':
+	return markRHSConstant(astNode.init); 
+	case 'VariableDeclaration':
+	return _.each(astNode.declarations, markRHSConstant); 
+    }	       
+ 
+    if(astNode.right) {
+	markRHSConstant(astNode.right); 
+    }
+}
 
 module.exports = {
     inferTypes: inferTypes    

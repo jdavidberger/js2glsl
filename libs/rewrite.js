@@ -33,10 +33,14 @@ function rewrite(astNode, tabs) {
             case 'VariableDeclaration': 
                 return tabString + handleChildren('\n'); 
             case 'VariableDeclarator':                 
-                return nodeUtils.getDataType(astNode.id) + " " + rewrite(astNode.id) + 
+                return (astNode.id.isConst ? "const " : "") + nodeUtils.getDataType(astNode.id) + " " + rewrite(astNode.id) + 
                     (astNode.init ? ("=" + rewrite(astNode.init)) : "") + ";"; 
-            case 'FunctionDeclaration':                 
-                return (astNode.id.dataType ? astNode.id.dataType : "void") + " " + 
+	    case 'ForStatement':
+	        return 'for(' + rewrite(astNode.init) + rewrite(astNode.test) + ";" + rewrite(astNode.update) + ") { " + rewrite(astNode.body) + "; }";
+	case 'UpdateExpression':
+	    return rewrite(astNode.argument) + astNode.operator; 
+        case 'FunctionDeclaration':                 
+            return (astNode.id.dataType ? astNode.id.dataType : "void") + " " + 
                     astNode.id.name + "(" + 
                         astNode.params.map(function(p) { return p.dataType + " " + p.name; }).join(", ") + ")" + 
                             rewrite(astNode.body);                 

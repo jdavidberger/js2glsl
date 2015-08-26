@@ -91,6 +91,10 @@ function getRoot(astNode) {
 
 function getChildren(astNode) {    
     switch(astNode.type) {
+	case 'ForStatement':
+	return [astNode.init, astNode.test, astNode.update, astNode.body];
+	case 'UpdateExpression':
+	return [astNode.argument]; 
         case 'FunctionDeclaration':
             var lst; 
             if(astNode.body.length !== undefined)
