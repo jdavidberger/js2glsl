@@ -111,10 +111,10 @@ function getKnownFunction(node) {
     
     candidates = candidates.filter(function(f) { return f.argTypes.length == node.arguments.length; } );
     
-    if(candidates.length === 1)
+    //if(candidates.length === 1)
         return candidates[0];
     
-    throw new Error("Overloaded functions by type are not yet implemented -- " + fName); 
+    //throw new Error("Overloaded functions by type are not yet implemented -- " + fName); 
 };
 
 function remapFunctions( ast, _this ) {
