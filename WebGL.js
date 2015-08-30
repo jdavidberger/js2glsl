@@ -22,20 +22,27 @@ function getPx(img, x, y, w, h) {
     if(y < 0) y = 0; 
     if(x >= w) x = w-1; 
     if(y >= h) y = h-1; 
-   var idx = (x + y * w) * 4;
+    var idx = (x + y * w) * 4;
 /*    if(idx < 0) 
 	console.log(w,h,x,y,idx);*/
-    return [ img[idx+0] || 0,
-	     img[idx+1] || 0,
-	     img[idx+2] || 0,
-	     img[idx+3] || 1]; 
+    var isByteBased = false;
+    switch(img.constructor.name) {
+	case "Uint8ClampedArray":
+	isByteBased = true; 
+    }
+    var div = isByteBased ? 255.0 : 1.0;
+    return [ img[idx+0]/div || 0,
+	     img[idx+1]/div || 0,
+	     img[idx+2]/div || 0,
+	     img[idx+3]/div || 1]; 
 }
 
 function texture2D(tex, coord) {
     var w = tex[1];
     var h = tex[2]; 
-    var x = coord[0]*(w) - 0.5; 
-    var y = (1.0-coord[1])*(h) - 0.5;
+    var x = coord[0]*(w) + 0.5; 
+    //var y = (1.0-coord[1])*(h) + 0.5;
+    var y = (coord[1])*(h) + 0.5;
     var fx = Math.floor(x); 
     var fy = Math.floor(y);
     var cx = Math.ceil(x);
@@ -77,6 +84,10 @@ function addVecs(a,b) {
     return rtn; 
 }
 
+function clamp(value, low, high) {
+      return Math.max(low, Math.min(value, high));
+}
+
 var builtins = [
     new Shared("sin"), new Shared("cos"), new Shared("tan"), new Shared("asin"),
     new Shared("acos"), new Shared("exp"), new Shared("log"), new Shared("sqrt"), 
@@ -88,7 +99,8 @@ var builtins = [
     new Builtin("atan", Math.atan2, [ "float", "float" ]),
     new Builtin("texture2D", texture2D, [ 'sampler2D', 'vec2' ], 'vec4'),
     new Builtin("mod", mod, [ 'float', 'float' ], 'float'),
-    new Builtin("addVecs4", addVecs, [ 'vec4', 'vec4' ], 'vec4')
+    new Builtin("addVecs4", addVecs, [ 'vec4', 'vec4' ], 'vec4'),
+    new Builtin("clamp", clamp, [ 'float', 'float', 'float' ], 'float')
 ];
 
 

@@ -131,17 +131,52 @@ function deModularize(ast) {
     }
 }
 
+    
+function getUsedFunctions(node, alreadySeen) {
+    if(node === undefined)
+	return [];
+    return _.chain(nodeUtils.getAllDescendants(node)).filter(function (n) {
+        return n.type == "CallExpression"; 
+    }).map(function(n) {
+        return rewrite(n.callee);
+    }).value(); 
+};
+
+
+function addFunctionAndCallees(allAst, obj, funcName) {
+    if(allAst.children[funcName])
+	return;
+    if(typeof obj[funcName] != 'function')
+	return; 
+    var parseTree = esprima.parse( rewrite.normalizeFunctionDeclaration(obj[funcName].toString(),funcName));
+    parseTree = parseTree.body[0]; // Strip off program root
+    allAst.children[funcName] = parseTree;
+    allAst.body.push(parseTree);
+    var functions = getUsedFunctions(parseTree); 
+    functions.forEach(function(n) { 
+	if(n.indexOf("this.") == 0) {
+	    n = n.slice("this.".length); 
+	    addFunctionAndCallees(allAst, obj, n); 
+	}
+    });
+}
+
 function getSource(allAst, KnownFunctionSources) {
     if(typeof(allAst ) == 'string') {        
         return getSource(esprima.parse(allAst)); 
     } else if(typeof(allAst) == "object" && allAst.type != "Program") {
             var obj = allAst;
-            allAst = { body: [] };
+            allAst = { body: [], children: {} };
+/*
             for (var m in obj) {
                 if (typeof obj[m] == "function" && !obj[m].exclude) {
                     allAst.body.push(esprima.parse( rewrite.normalizeFunctionDeclaration(obj[m].toString(),m)  ));
                 }
             }
+*/
+	addFunctionAndCallees(allAst, obj, 'VertexPosition');
+	addFunctionAndCallees(allAst, obj, 'FragmentColor');
+	addFunctionAndCallees(allAst, obj, 'PointSize');
             // Remove 'this.' expressions
             rewrite.removeMemberRoot(allAst, "this");           
     }
