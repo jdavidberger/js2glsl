@@ -1,5 +1,4 @@
 var _ = require('underscore');
-var log = require('loglevel');
 var nodeUtils = require('./nodeUtils');
 var knownFunctions = require('./knownFunctions');
 

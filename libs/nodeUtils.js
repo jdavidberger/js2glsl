@@ -1,7 +1,7 @@
 var _ = require('underscore');
 
 function LOG(msg) {
-    console.log(msg); 
+    //console.log(msg); 
 };
 /**
     Set the data type for a give node. 
