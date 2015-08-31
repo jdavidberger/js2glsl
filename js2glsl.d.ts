@@ -10,4 +10,8 @@ declare module js2glsl {
         GetProgram(gl: WebGLRenderingContext): WebGLProgram;
     }       
     var builtIns : Object; 
+    class Sampler2D {
+	constructor( data : number[], width: number, height: number);
+	texture2D(coord : [number, number]) : [number, number, number, number]; 
+    }
 }

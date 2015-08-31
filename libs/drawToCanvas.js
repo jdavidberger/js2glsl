@@ -16,7 +16,7 @@ function drawToCanvas(canvas, mode, spec, attributes, uniforms) {
 	    img.data[idx + 0] = Math.round( (rgba[0]||0) * 255);
 	    img.data[idx + 1] = Math.round( (rgba[1]||0) * 255);
 	    img.data[idx + 2] = Math.round( (rgba[2]||0) * 255);
-	    img.data[idx + 3] = Math.round( (rgba[3] == undefined ? 1 : rgba[3]) * 255);
+	    img.data[idx + 3] = Math.round( (rgba[3] == undefined ? 1 : rgba[3]) * 255); // If rgba[3] == 0 then our || trick does the wrong thing. 
 
 	}
     }
