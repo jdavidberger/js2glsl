@@ -14,5 +14,6 @@ var Sampler2D = require("./libs/sampler2D");
 js2glsl.ShaderSpecification = ShaderSpecification;
 js2glsl.builtIns = builtIns.Builtins; 
 js2glsl.Sampler2D = Sampler2D; 
+js2glsl.drawToCanvas = require('./libs/drawToCanvas');
 
 module.exports = js2glsl;

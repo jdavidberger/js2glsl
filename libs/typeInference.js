@@ -3,10 +3,11 @@ var _ = require('underscore');
 var nodeUtils = require('./nodeUtils');
 var knownFunctions = require('./knownFunctions');
 var rewrite = require('./rewrite'); 
-var log = require('loglevel');
+
 
 var syncDataType = nodeUtils.syncDataType;
 var setDataType  = nodeUtils.setDataType; 
+var LOG = nodeUtils.LOG;
 
 /**
     Attempts to assign a dataType to every l-value in the AST
@@ -14,7 +15,7 @@ var setDataType  = nodeUtils.setDataType;
 function inferTypes( rootNode ) {           
     var allNodes = nodeUtils.getAllNodes(rootNode);
     var nodesToProcess = [rootNode];
-    log.setLevel("TRACE");
+
     // All array types are (for now) called vec[n]
     _.chain(allNodes).filter(function(node) {
             return node.type == 'ArrayExpression';
@@ -138,16 +139,7 @@ function inferTypes( rootNode ) {
         
         /***** Last resort propagation methods */
         
-        // If we are out of nodes to process, first try applying dataTypeHints
-        if(nodesToProcess.length == 0 ) {
-            _.chain(allNodes).filter(function (node) {                 
-                return node.dataType === undefined && node.dataTypeHint !== undefined;
-            }).each(function(node) {
-                nodesToProcess = nodesToProcess.concat( setDataType(node, node.dataTypeHint, "based on hint") ); 
-            });
-        }
-
-        // Still out of nodes? Solidify the array counts. 
+        // Out of nodes? Solidify the array counts. 
         if(nodesToProcess.length == 0 ) {            
             var nodesWithDataTypeMinSizes = _.chain(allNodes).filter(function (node) {        
 		return node.dataType === undefined && node.dataTypeAtLeast > 0;
@@ -160,11 +152,22 @@ function inferTypes( rootNode ) {
 	    // you have two unknown sized vecs that are set to be equal, it always ends up assigning the larger size. 
 	    for(var i = 0;i < nodesWithDataTypeMinSizes.length && nodesToProcess.length == 0;i++) {
 		var node = nodesWithDataTypeMinSizes[i]; 
-		console.log( rewrite(node) + " max seen index --" + nodeUtils.getDataTypeForId(node, node) ); 
+		LOG( rewrite(node) + " max seen index --" + nodeUtils.getDataTypeForId(node, node) ); 
                 nodesToProcess = nodesToProcess.concat( setDataType(node, nodeUtils.getDataTypeForId(node, node)) ); 
  	    }
         }
         
+        // If we are still out of nodes to process, first try applying dataTypeHints
+        if(nodesToProcess.length == 0 ) {
+            _.chain(allNodes).filter(function (node) {                 
+                return node.dataType === undefined && node.dataTypeHint !== undefined;
+            }).each(function(node) {
+                nodesToProcess = nodesToProcess.concat( setDataType(node, node.dataTypeHint) ); 
+		LOG("Setting " + rewrite(node) + " to " + node.dataTypeHint + " based on hint");
+            });
+        }
+
+
         // Essentially this just guesses 'float' for the rest of the unknowns. This is most likely ok. GLSL needs a type
         // and _most_ of the time you want float. In particular, if a variable is just not used, it could be a coin flip
         // if it is an int or a float, but since it isn't used either one works and the GLSL compiler will probably just 
@@ -172,7 +175,7 @@ function inferTypes( rootNode ) {
         if(nodesToProcess.length == 0 ) {            
             _.chain(allNodes).each(function (node) {        
                 if(node.name && node.type == "Identifier" && node.dataType === undefined) {            
-		    console.log( rewrite(node) + " best guess"); 
+		    LOG( rewrite(node) + " best guess"); 
                     nodesToProcess = nodesToProcess.concat( setDataType(node, nodeUtils.getDataTypeForId(node, node)) ); 
                 }
             });                

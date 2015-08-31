@@ -4,10 +4,10 @@ function Sampler2D(imgData, width, height) {
     this.flipY = false; 
     this.width = width;
     this.height = height;
-    this.magnificationFilter = Sampler2D.Nearest;
-    this.minificationFilter = Sampler2D.Nearest;
-    this.wrapX = Sampler2D.ClampToEdge;
-    this.wrapY = Sampler2D.ClampToEdge;
+    this.magnificationFilter = Sampler2D.Filter.Nearest;
+    this.minificationFilter = Sampler2D.Filter.Nearest;
+    this.wrapX = Sampler2D.Wrap.ClampToEdge;
+    this.wrapY = Sampler2D.Wrap.ClampToEdge;
 };
 
 Sampler2D.Filter = {
@@ -62,17 +62,18 @@ Sampler2D.prototype.getPx = function(x, y) {
     return [ this.data[idx+0]/div || 0,
 	     this.data[idx+1]/div || 0,
 	     this.data[idx+2]/div || 0,
-	     this.data[idx+3]/div || 1]; 
+	     this.data[idx+3] == undefined ? 1 : this.data[idx+3]/div]; 
 };
 
 Sampler2D.prototype.texture2D = function(coord) {
     var w = this.width;
     var h = this.height; 
-    var x = coord[0]*(w) + 0.5; 
+    var flErrBias = 10*Number.EPSILON;
+    var x = (coord[0]-flErrBias)*(w) ;
     var c1 = coord[1]; 
     if(this.flipY)
 	c1 = 1.0 - c1; 
-    var y = (c1)*(h) + 0.5;
+    var y = (c1-flErrBias)*h ;
     var fx = Math.floor(x); 
     var fy = Math.floor(y);
     var cx = Math.ceil(x);
@@ -89,11 +90,14 @@ Sampler2D.prototype.texture2D = function(coord) {
     for(var i = 0;i < 4;i++) {
 	var xi = candidates[i][0];
 	var yi = candidates[i][1];
-	var d = Math.sqrt(Math.pow((x-xi), 2) + Math.pow((y-yi), 2));
+	var d = (Math.pow((x-xi), 2) + Math.pow((y-yi), 2));
 	if(d < winner_dist) {
 	    winner_idx = i; 
 	    winner_dist = d; 
 	}
+    }
+    if(winner_idx != 0) {
+	winner_idx;
     }
     var wx = candidates[winner_idx][0];
     var wy = candidates[winner_idx][1];

@@ -7,16 +7,16 @@ var ParseTokens = require('glsl-parser/direct')
 var test = {};
 
 test.isValidShader = function(shaderSpec){        
-var shader = shaderSpec.vertex ? shaderSpec : shaderSpec.ShaderSource();            
+    var shader = shaderSpec.vertex ? shaderSpec : shaderSpec.ShaderSource();            
     try {        
-            {
-                var tokens = TokenString(shader.vertex);
-                var ast = ParseTokens(tokens);
-            } 
-            {
-                var tokens = TokenString(shader.fragment);
-                var ast = ParseTokens(tokens)        
-            }
+        {
+            var tokens = TokenString(shader.vertex);
+            var ast = ParseTokens(tokens);
+        } 
+        {
+            var tokens = TokenString(shader.fragment);
+            var ast = ParseTokens(tokens)        
+        }
     }catch(e) {
         throw new Error(e + "\n\nIn shaders: \n" + shader.vertex + "\n----\n" + shader.fragment); 
     }        
@@ -43,7 +43,7 @@ try {
     var createShader = require('gl-shader')
     var canvas = document.createElement('canvas');
     document.body.appendChild(canvas);
-    var gl = canvas.getContext('webgl');
+    var gl = canvas.getContext("experimental-webgl") || canvas.getContext('webgl');
         
     test.isValidShader = function(shaderSpec){                
         var shader = shaderSpec.vertex ? shaderSpec : shaderSpec.ShaderSource();            

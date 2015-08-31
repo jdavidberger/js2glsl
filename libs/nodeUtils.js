@@ -1,5 +1,8 @@
 var _ = require('underscore');
-var log = require('loglevel');
+
+function LOG(msg) {
+    console.log(msg); 
+};
 /**
     Set the data type for a give node. 
     
@@ -54,7 +57,7 @@ function syncDataType(nodeA, nodeB, msg) {
     msg = msg || "<unmarked reason>"; 
     if(changed.length){
 	var rewrite = require('./rewrite'); 
-	console.log("Syncing " + rewrite(nodeA) + " <-> " + rewrite(nodeB) + " to " + nodeA.dataType + " for " + msg);
+	LOG("Syncing " + rewrite(nodeA) + " <-> " + rewrite(nodeB) + " to " + nodeA.dataType + " for " + msg);
     }
     return changed; 
 }
@@ -151,7 +154,7 @@ function getAllDescendants(ast) {
     try {
         return _.reduce( getChildren(ast), function(rtn, node) { return rtn.concat( getAllDescendants(node) ); }, [ ast ] ); 
     } catch(e) {    
-        log.info(ast);
+        LOG(ast);
         throw new Error(e.toString() + "\n from: " + ast.type + " -- " + ast.toString()); 
     }
 }
@@ -249,5 +252,6 @@ module.exports = {
     getAllDescendants: getAllDescendants,
     getFunctionByName: getFunctionByName,
     setDataType: setDataType,
-    syncDataType: syncDataType
+    syncDataType: syncDataType,
+    LOG: LOG
 }

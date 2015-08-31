@@ -15,7 +15,9 @@ function rewrite(astNode, tabs) {
             return [tabString + "{", handleChildren("\n"), tabString + "}" ].join("\n"); 
         };
         if(astNode.left != undefined && astNode.right != undefined && astNode.operator != undefined) {
-               return "(" + rewrite(astNode.left) + " " + astNode.operator + " " + rewrite(astNode.right) + ")";         
+	    if(astNode.operator == "%")
+		return "mod("+rewrite(astNode.left) + ", " + rewrite(astNode.right) + ")";	    
+            return "(" + rewrite(astNode.left) + " " + astNode.operator + " " + rewrite(astNode.right) + ")";         
         }
         
         switch(astNode.type) {
