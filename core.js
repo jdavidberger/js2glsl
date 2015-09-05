@@ -6,7 +6,7 @@ var nodeUtils = require('./libs/nodeUtils');
 var knownFunctions = require('./libs/knownFunctions');
 var rewrite = require('./libs/rewrite'); 
 var typeInference = require('./libs/typeInference'); 
-
+var LOG = nodeUtils.LOG;
 
 function gatherObjectProperties(ast, idNode) {
     if(idNode === undefined)
@@ -352,7 +352,7 @@ function getSource(allAst, KnownFunctionSources) {
          "}"    
     ].join('\n'); 
 
-    console.log(vertex, fragment);
+    LOG(vertex, fragment);
     return {
         vertex: vertex,
         fragment: fragment

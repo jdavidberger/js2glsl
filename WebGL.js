@@ -50,6 +50,9 @@ var builtins = [
     new Builtin("atan", Math.atan2, [ "float", "float" ]),
     new Builtin("texture2D", texture2D, [ 'sampler2D', 'vec2' ], 'vec4'),
     new Builtin("mod", mod, [ 'float', 'float' ], 'float'),
+    new Builtin("mulVecC4", mulVecC, [ 'vec4', 'float'], 'float'),
+    new Builtin("addVecC4", addVecC, [ 'vec4', 'float'], 'float'),
+    new Builtin("subVecs3", subVecs, [ 'vec3', 'vec3' ], 'vec3'), 
     new Builtin("addVecs4", addVecs, [ 'vec4', 'vec4' ], 'vec4'),
     new Builtin("clamp", clamp, [ 'float', 'float', 'float' ], 'float')
 ];

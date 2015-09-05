@@ -2,6 +2,8 @@ var _ = require('underscore');
 var nodeUtils = require('./nodeUtils');
 var rewrite = require ('./rewrite');
 var WebGL = require('../WebGL'); 
+var KnownFunction = require('./KnownFunction');
+var glMatrixMapping = require('./glmatrixMapping');
 
 var renameFunction = function(newName) {
     return function(node) {
@@ -32,27 +34,6 @@ var makeInfix = function(infix) {
         node.callee = node.arguments = undefined;
     };
 };
-
-function KnownFunction( name, argTypes, rtnType, transform, src ) {
-    this.name = name; 
-    this.rtnType = rtnType || "float";
-    this.argTypes = argTypes || [ "float" ];
-    this.transform = transform; 
-    this.src = src;
-};
-KnownFunction.prototype.toString = function() {
-    return this.name + "(" + this.argTypes.join(",") + ")";
-}
-
-KnownFunction.prototype.inferTypes = function(node) {
-    var rtn = nodeUtils.setDataType(node, this.rtnType);
-    if(this.argTypes.length !== node.arguments.length) {
-        throw new Error(rewrite(node.callee) + " should have " + this.argTypes.length + " arguments, it has " + node.arguments.length); 
-    }            
-    for(var i = 0;i < this.argTypes.length;i++) 
-        rtn = rtn.concat(nodeUtils.setDataType(node.arguments[i], this.argTypes[i]));
-    return rtn;
-}
 
 function MemberFunction( name, fn ) {
     this.name = name;
@@ -89,7 +70,7 @@ var knownFunctions = [
     return f.constructor.name == "Shared";
 }).map(function(f) {
     return new KnownFunction( "Math." + f.name, f.argTypes, f.rtnType, renameFunction(f.name) )
-}));
+})).concat( glMatrixMapping );
 
 var knownFunctionLookup = {};
 for(var i = 0;i < knownFunctions.length;i++) {
