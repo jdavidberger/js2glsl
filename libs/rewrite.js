@@ -16,7 +16,11 @@ function rewrite(astNode, tabs) {
         if(astNode.left != undefined && astNode.right != undefined && astNode.operator != undefined) {
 	    if(astNode.operator == "%")
 		return "mod("+rewrite(astNode.left) + ", " + rewrite(astNode.right) + ")";	    
-            return "(" + rewrite(astNode.left) + " " + astNode.operator + " " + rewrite(astNode.right) + ")";         
+	    var useParans = astNode.operator != '=';
+	    var statement = rewrite(astNode.left) + " " + astNode.operator + " " + rewrite(astNode.right);
+	    if(useParans)
+		statement = "(" + statement + ")"; 
+	    return statement; 
         }
         
         switch(astNode.type) {
@@ -35,7 +39,7 @@ function rewrite(astNode, tabs) {
                 return tabString + handleChildren('\n'); 
             case 'VariableDeclarator':                 
                 return (astNode.id.isConst ? "const " : "") + nodeUtils.getDataType(astNode.id) + " " + rewrite(astNode.id) + 
-                    (astNode.init ? ("=" + rewrite(astNode.init)) : "") + ";"; 
+                    (astNode.init ? (" = " + rewrite(astNode.init)) : "") + ";"; 
 	    case 'ForStatement':
 	        return 'for(' + rewrite(astNode.init) + rewrite(astNode.test) + ";" + rewrite(astNode.update) + ") { " + rewrite(astNode.body) + "; }";
 	case 'UpdateExpression':
@@ -43,7 +47,7 @@ function rewrite(astNode, tabs) {
         case 'FunctionDeclaration':                 
             return (astNode.id.dataType ? astNode.id.dataType : "void") + " " + 
                     astNode.id.name + "(" + 
-                        astNode.params.map(function(p) { return p.dataType + " " + p.name; }).join(", ") + ")" + 
+                        astNode.params.map(function(p) { return (p.isOutParam ? "out " : "") + p.dataType + " " + p.name; }).join(", ") + ")" + 
                             rewrite(astNode.body);                 
             case 'ExpressionStatement':                 
                 return tabString + rewrite(astNode.expression) + ";";
@@ -68,7 +72,7 @@ function rewrite(astNode, tabs) {
                     return astNode.value + ".";
                 return astNode.value;
             case 'UnaryExpression':
-                return "(" + astNode.operator + rewrite(astNode.argument) + ")";
+                return "(" + astNode.operator + "(" + rewrite(astNode.argument) + ") )";
             case 'rawSource':
                 return astNode.src;
             case '':

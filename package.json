@@ -15,6 +15,7 @@
   "dependencies": {
     "browserify": "^11.0.1",
     "esprima": "^2.4.1",
+    "gl-matrix": "^2.3.1",
     "gulp": "^3.9.0",
     "gulp-rename": "^1.2.2",
     "gulp-uglify": "^1.4.0",

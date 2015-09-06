@@ -39,7 +39,7 @@ ShaderSpecification.prototype.GetProgram = function (gl){
         gl.shaderSource(shader, shader.src);
         gl.compileShader(shader);
           if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-              throw new Error(gl.getShaderInfoLog(shader));              
+              throw new Error(gl.getShaderInfoLog(shader) + "\r\n\r\n" + shader.src);              
           }
         gl.attachShader(shaderProgram, shader);
     });

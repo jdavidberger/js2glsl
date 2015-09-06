@@ -1,6 +1,7 @@
 var esprima = require('esprima'); 
 var escodegen = require('escodegen'); 
 var _ = require('underscore');
+var glMatrix = require('gl-matrix');
 
 var nodeUtils = require('./libs/nodeUtils');
 var knownFunctions = require('./libs/knownFunctions');
@@ -142,22 +143,78 @@ function getUsedFunctions(node, alreadySeen) {
     }).value(); 
 };
 
+function renameFunctionCallSites(node, oldName, newName) {
+    if(node === undefined)
+	return;
+
+    _.chain(nodeUtils.getAllDescendants(node)).filter(function (n) {
+        return n.type == "CallExpression" && rewrite(n.callee) == oldName; 
+    }).each(function(n) {
+	n.callee = {
+	    parent: n,
+	    type: 'Identifier',
+	    name: newName
+	};
+    });
+}
+
+var stdlib = {}; 
+function addVecFuncs(baseType) {
+    function addVecFunc(name) {	
+	var fn = glMatrix[baseType][name]; 
+	var origName = baseType + "." + name;
+	name = baseType + "_" + name; 
+	var parseTree = esprima.parse(rewrite.normalizeFunctionDeclaration(fn.toString(),name));	
+	var funBody = parseTree.body[0];
+	if(funBody.params[0] && funBody.params[0].name == 'out') {
+	    funBody.params[0].isOutParam = true;
+	    _.each(nodeUtils.getNodesWithIdInScope(parseTree, funBody.params[0]), function(node) {
+		node.name = "out_param"; 
+	    }); 
+	}
+	stdlib[origName] = parseTree;
+    }
+    addVecFunc('lerp'); 
+    addVecFunc('scaleAndAdd'); 
+    addVecFunc('squaredDistance');
+    addVecFunc('sqrDist');
+    addVecFunc('sqrLen');
+    addVecFunc('squaredLength');
+}
+
+for(var i = 2;i <= 4;i++) {
+    addVecFuncs('vec' + i);    
+}
 
 function addFunctionAndCallees(allAst, obj, funcName) {
     if(allAst.children[funcName])
 	return;
     if(typeof obj[funcName] != 'function')
 	return; 
-    var parseTree = esprima.parse( rewrite.normalizeFunctionDeclaration(obj[funcName].toString(),funcName));
-    parseTree = parseTree.body[0]; // Strip off program root
-    allAst.children[funcName] = parseTree;
-    allAst.body.push(parseTree);
+
+    function addFunction(fn, funcName) {
+	var funcName = funcName || fn.name; 
+	var parseTree = typeof fn == 'function' ? 
+	    esprima.parse( rewrite.normalizeFunctionDeclaration(fn.toString(),funcName)) :
+	    fn;
+
+	parseTree = parseTree.body[0]; // Strip off program root
+	allAst.children[funcName] = parseTree;
+	allAst.body.push(parseTree);
+	return parseTree;
+    }
+
+    var parseTree = addFunction(obj[funcName], funcName);
     var functions = getUsedFunctions(parseTree); 
-    functions.forEach(function(n) { 
+    functions.forEach(function(n) { 	
 	if(n.indexOf("this.") == 0) {
 	    n = n.slice("this.".length); 
 	    addFunctionAndCallees(allAst, obj, n); 
-	}
+	} else if(stdlib[n]){
+	    var name = n.replace(".", "_"); 
+	    addFunction(stdlib[n], name);
+	    renameFunctionCallSites(allAst, n, name);
+	}	
     });
 }
 
@@ -167,13 +224,7 @@ function getSource(allAst, KnownFunctionSources) {
     } else if(typeof(allAst) == "object" && allAst.type != "Program") {
             var obj = allAst;
             allAst = { body: [], children: {} };
-/*
-            for (var m in obj) {
-                if (typeof obj[m] == "function" && !obj[m].exclude) {
-                    allAst.body.push(esprima.parse( rewrite.normalizeFunctionDeclaration(obj[m].toString(),m)  ));
-                }
-            }
-*/
+
 	addFunctionAndCallees(allAst, obj, 'VertexPosition');
 	addFunctionAndCallees(allAst, obj, 'FragmentColor');
 	addFunctionAndCallees(allAst, obj, 'PointSize');
@@ -215,10 +266,7 @@ function getSource(allAst, KnownFunctionSources) {
     
     rewrite.removeIdPrefix(allAst, "attributes_");    
     rewrite.removeIdPrefix(allAst, "uniforms_");    
-       
-    //var glPositionAst = _.find(nodeUtils.getAllDescendants(allAst), function(n) { return n.type == "FunctionDeclaration" && n.id.name == "VertexPosition"; });
-    //var glColorAst = _.find(nodeUtils.getAllDescendants(allAst), function(n) { return n.type == "FunctionDeclaration" && n.id.name == "FragmentColor"; });
-        
+               
     glPositionAst.id.dataTypeHint = "vec4";
     glColorAst.id.dataTypeHint = "vec4";
     typeInference.inferTypes(allAst); 
@@ -315,14 +363,42 @@ function getSource(allAst, KnownFunctionSources) {
         return rtn;
     };
         
-    getUsedFunctions(glPositionAst)
-    .concat(getUsedFunctions(glColorAst))
-    .forEach( function(node) {
-        nodeUtils.getAllDescendants(node).forEach(function(node) {
-            if(node.error)
-                throw node.error;
-        });
-    }); 
+    var usedFunctions = 
+	getUsedFunctions(glPositionAst)
+	.concat(getUsedFunctions(glColorAst)); 
+
+    var usedNames = {};
+    
+    _.each(nodeUtils.getAllNodes(allAst), function(node) {
+	if(node.id) {
+	    usedNames[node.id] = true; 
+	}
+    });
+
+    _.each(usedFunctions, function(func) {
+	var variableDecls = nodeUtils.getAllNodes(func).filter(nodeUtils.hasType("VariableDeclarator"));
+	var prefix = "_local";
+	_.each(variableDecls, function(decl) {
+	    if(decl.id.name.indexOf(prefix) == 0){
+		var newName = decl.id.name.slice(prefix.length);
+		if(usedNames[newName] === undefined) {
+		    var sites = nodeUtils.getNodesWithIdInScope(func, decl.id);
+		    _.each(sites, function(n) {
+			n.name = newName;
+		    }); 
+		}
+	    }
+	});
+    });
+    
+
+    usedFunctions
+	.forEach( function(node) {
+            nodeUtils.getAllDescendants(node).forEach(function(node) {
+		if(node.error)
+                    throw node.error;
+            });
+	}); 
     
     var vertex = [
         "precision mediump float;",        

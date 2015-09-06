@@ -1,7 +1,7 @@
 var _ = require('underscore');
 
-function LOG(msg) {
-    //console.log(msg); 
+function LOG() {
+    console.log.apply(console, arguments); 
 };
 /**
     Set the data type for a give node. 
@@ -154,8 +154,9 @@ function getAllDescendants(ast) {
     try {
         return _.reduce( getChildren(ast), function(rtn, node) { return rtn.concat( getAllDescendants(node) ); }, [ ast ] ); 
     } catch(e) {    
-        LOG(ast);
-        throw new Error(e.toString() + "\n from: " + ast.type + " -- " + ast.toString()); 
+	if(ast && ast.type && ast.toString)
+            throw new Error(e.toString() + "\n from: " + ast.type + " -- " + ast.toString()); 
+	throw new Error(e.toString() + "\n from unexpected: " + (ast)); 
     }
 }
 
@@ -209,7 +210,14 @@ function getNodesWithIdInScope(astNode, id) {
         scope = getRoot(astNode); 
     }
     return _.filter( getAllDescendants(scope), function(node) {
-        return node.type == 'Identifier' && node.name == id; 
+	var isDerivativeId =
+	    node.parent != undefined &&
+	    node.parent.type == "MemberExpression" && 
+	    node.parent.property == node; 
+
+        return node.type == 'Identifier' && 
+	    node.name == id && 
+	    isDerivativeId == false;
     });
 }
 
@@ -241,6 +249,16 @@ function getFunctionByName(allAst, name) {
                             });
 }
 
+function isLHV(node) {
+    switch(node.type) {
+    case 'Identifier': 
+	return true; 
+    case 'MemberExpression':
+	return isRHV(node.property);
+    }
+    return false; 
+}
+
 module.exports = {
     getAllNodes: getAllNodes,
     getChildren: getChildren,
@@ -253,5 +271,6 @@ module.exports = {
     getFunctionByName: getFunctionByName,
     setDataType: setDataType,
     syncDataType: syncDataType,
+    isLHV: isLHV,
     LOG: LOG
 }

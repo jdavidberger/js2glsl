@@ -42,28 +42,15 @@ function MemberFunction( name, fn ) {
 function Shared(name, args, rtn) {
     KnownFunction.call(this, "Math."+name, args, rtn, renameFunction(name));
 };
-var knownFunctionsSource = {
-    "_mat4_multiplyVec3": "vec3 _mat4_multiplyVec3(mat4 m, vec3 v) { return (m * vec4(v, 1.0)).xyz; }"
-};
+
 var knownFunctions = [
-    { name: "builtIns.asType", inferTypes: castTypeInference, transform: markType },
+    { name: "builtIns.asType", inferTypes: castTypeInference, transform: markType, toString: function() { return 'builtIns.asType(<any>, <type>)';} },
     new KnownFunction("mat4.multiplyVec3", ['mat4', 'vec3'], 'vec3', renameFunction("_mat4_multiplyVec3" )),
     new KnownFunction("vec3.scale", ['vec3', 'float'], 'vec3', makeInfix("*") ),   
     new KnownFunction("vec2", ['float','float'], 'vec2' ),
     new KnownFunction("vec3", ['float','float','float'], 'vec3' ),
     new KnownFunction("vec4", ['float','float','float','float'], 'vec4' ),
     new KnownFunction("Math.atan2", ['float','float'], 'float', renameFunction("atan") ),
-
-    new KnownFunction("builtIns.multVecs2", [ 'vec2', 'vec2' ], 'vec2', makeInfix("*")),
-    new KnownFunction("builtIns.multVecs3", [ 'vec3', 'vec3' ], 'vec3', makeInfix("*")),
-    new KnownFunction("builtIns.multVecs4", [ 'vec4', 'vec4' ], 'vec4', makeInfix("*")),
-
-    new KnownFunction("builtIns.addVecs2", [ 'vec2', 'vec2' ], 'vec2', makeInfix("+")),
-    new KnownFunction("builtIns.addVecs3", [ 'vec3', 'vec3' ], 'vec3', makeInfix("+")),
-    new KnownFunction("builtIns.addVecs4", [ 'vec4', 'vec4' ], 'vec4', makeInfix("+")),
-
-    new KnownFunction("builtIns.multMat4", [ 'mat4', 'vec4' ], 'vec4', makeInfix("*")),
-    new KnownFunction("builtIns.multMat3", [ 'mat3', 'vec3' ], 'vec3', makeInfix("*"))
 ].concat(WebGL.MetaBuiltins.map( function(f) {
     return new KnownFunction( "builtIns." + f.name, f.argTypes, f.rtnType, renameFunction(f.name) )
 })).concat(WebGL.MetaBuiltins.filter( function(f) {    

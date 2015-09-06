@@ -34,14 +34,14 @@ function inferTypes( rootNode ) {
         
         if(knownFunction === undefined) {                
             var astFunctions = _.chain(nodeUtils.getAllNodes(node))
-                                .filter(function (n) {
-                                    return n.type == "FunctionDeclaration" && n.id.type == "Identifier" && n.id.name == node.callee.name;
-                                }).each(function(n) {
-                                    nodesToProcess = nodesToProcess.concat(  syncDataType(n, node), "Matched call to return type of other function"); 
-                                    _.each(n.params, function(an,idx) {
-                                        nodesToProcess = nodesToProcess.concat( syncDataType(an, node.arguments[idx], "Matched " + idx + " argument") );
-                                    });
-                                }).value();
+                .filter(function (n) {
+                    return n.type == "FunctionDeclaration" && n.id.type == "Identifier" && n.id.name == node.callee.name && n.params.length == node.arguments.length;
+                }).each(function(n) {
+                    nodesToProcess = nodesToProcess.concat(  syncDataType(n, node), "Matched call to return type of other function"); 
+                    _.each(n.params, function(an,idx) {
+                        nodesToProcess = nodesToProcess.concat( syncDataType(an, node.arguments[idx], "Matched " + idx + " argument") );
+                    });
+                }).value();
             if(astFunctions.length > 1) {
                 throw new Error("Type overloading isn't allowed; not even sure how you did that.");
             }
@@ -88,7 +88,7 @@ function inferTypes( rootNode ) {
             // Happens when an argument gets its type processed
             else if(parentNode.type == "FunctionDeclaration" || parentNode.type == "FunctionExpression") {
                 _.chain( nodeUtils.getNodesWithIdInScope(node, parentNode.id) ).filter(function(node) {
-                    return node.parent.type == 'CallExpression';
+                    return node.parent.type == 'CallExpression' && node.parent.arguments.length == parentNode.params.length;
                 }).each(function (calleeIdNode) {
                     var callExpression = calleeIdNode.parent; 
                     nodesToProcess = nodesToProcess.concat(  syncDataType(parentNode.id, callExpression, "Call has same type as fn") ); 
@@ -174,7 +174,7 @@ function inferTypes( rootNode ) {
         // yank it out. 
         if(nodesToProcess.length == 0 ) {            
             _.chain(allNodes).each(function (node) {        
-                if(node.name && node.type == "Identifier" && node.dataType === undefined) {            
+                if(node.name && node.type == "Identifier" && node.dataType === undefined && isInCallExpression(node) == false) {            
 		    LOG( rewrite(node) + " best guess"); 
                     nodesToProcess = nodesToProcess.concat( setDataType(node, nodeUtils.getDataTypeForId(node, node)) ); 
                 }
@@ -192,7 +192,19 @@ function inferTypes( rootNode ) {
     });
 
 } 
-
+function isInCallExpression(node) {
+    if(node === undefined)
+	return false;
+    
+    switch(node.type) {
+    case 'Identifier':
+    case 'MemberExpression':
+	return isInCallExpression(node.parent);
+    case 'CallExpression':
+	return true; 
+    }
+    return false;
+}
 function markRHSConstant(astNode) {
     switch(astNode.type) {
 	case 'Identifier': 

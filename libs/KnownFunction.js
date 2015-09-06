@@ -1,4 +1,5 @@
 var nodeUtils = require('./nodeUtils');
+var rewrite = require ('./rewrite');
 
 function KnownFunction( name, argTypes, rtnType, transform, src ) {
     this.name = name; 
