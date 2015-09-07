@@ -107,9 +107,9 @@ function inferTypes( rootNode ) {
             }
             
             // If a return statements argument was set, propagate to the function definition its in
-            else if(parentNode.type == 'ReturnStatement' && parentNode.argument != undefined) {
+            else if(parentNode.type == 'ReturnStatement' && parentNode.argument !== undefined) {
                 var p = parentNode; 
-                while(p != undefined && p.type != "FunctionDeclaration" && p.type != "FunctionExpression" ) {
+                while(p !== undefined && p.type != "FunctionDeclaration" && p.type != "FunctionExpression" ) {
                     p = p.parent; 
                 }    
                 if(p && p.type == "FunctionExpression") {
@@ -123,7 +123,7 @@ function inferTypes( rootNode ) {
             }
             
             // Anything with a left/right thing has the same type. Also mark the parent Node. 
-            else if(parentNode.left != undefined && parentNode.right != undefined) {
+            else if(parentNode.left !== undefined && parentNode.right !== undefined) {
                 nodesToProcess = nodesToProcess.concat( syncDataType(parentNode.left, parentNode.right, "left == right for binary expression") );
                 nodesToProcess = nodesToProcess.concat( syncDataType(parentNode, parentNode.left, "binary expression parent node must equal operands") );
             }
@@ -139,7 +139,7 @@ function inferTypes( rootNode ) {
         /***** Last resort propagation methods */
         
         // Out of nodes? Solidify the array counts. 
-        if(nodesToProcess.length == 0 ) {            
+        if(nodesToProcess.length === 0 ) {            
             var nodesWithDataTypeMinSizes = _.chain(allNodes).filter(function (node) {        
 		return node.dataType === undefined && node.dataTypeAtLeast > 0;
 	    }).sortBy(function(node) { 
@@ -149,15 +149,15 @@ function inferTypes( rootNode ) {
 	    
 	    // We have to bail if nodes get added to process. By starting with the largest, we make sure situations where 
 	    // you have two unknown sized vecs that are set to be equal, it always ends up assigning the larger size. 
-	    for(var i = 0;i < nodesWithDataTypeMinSizes.length && nodesToProcess.length == 0;i++) {
-		var node = nodesWithDataTypeMinSizes[i]; 
-		LOG( rewrite(node) + " max seen index --" + nodeUtils.getDataTypeForId(node, node) ); 
-                nodesToProcess = nodesToProcess.concat( setDataType(node, nodeUtils.getDataTypeForId(node, node)) ); 
+	    for(var i = 0;i < nodesWithDataTypeMinSizes.length && nodesToProcess.length === 0;i++) {
+		var nodeWithMinDatatype = nodesWithDataTypeMinSizes[i]; 
+		LOG( rewrite(nodeWithMinDatatype) + " max seen index --" + nodeUtils.getDataTypeForId(nodeWithMinDatatype, nodeWithMinDatatype) ); 
+                nodesToProcess = nodesToProcess.concat( setDataType(nodeWithMinDatatype, nodeUtils.getDataTypeForId(nodeWithMinDatatype, nodeWithMinDatatype)) ); 
  	    }
         }
         
         // If we are still out of nodes to process, first try applying dataTypeHints
-        if(nodesToProcess.length == 0 ) {
+        if(nodesToProcess.length === 0 ) {
             _.chain(allNodes).filter(function (node) {                 
                 return node.dataType === undefined && node.dataTypeHint !== undefined;
             }).each(function(node) {
@@ -171,9 +171,9 @@ function inferTypes( rootNode ) {
         // and _most_ of the time you want float. In particular, if a variable is just not used, it could be a coin flip
         // if it is an int or a float, but since it isn't used either one works and the GLSL compiler will probably just 
         // yank it out. 
-        if(nodesToProcess.length == 0 ) {            
+        if(nodesToProcess.length === 0 ) {            
             _.chain(allNodes).each(function (node) {        
-                if(node.name && node.type == "Identifier" && node.dataType === undefined && isInCallExpression(node) == false) {            
+                if(node.name && node.type == "Identifier" && node.dataType === undefined && isInCallExpression(node) === false) {            
 		    LOG( rewrite(node) + " best guess"); 
                     nodesToProcess = nodesToProcess.concat( setDataType(node, nodeUtils.getDataTypeForId(node, node)) ); 
                 }

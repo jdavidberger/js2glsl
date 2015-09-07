@@ -11,16 +11,16 @@ var WeakMap = require('weakmap');
 var js2glsl = require('../core');
 
 function ShaderSpecification(vertex, fragmentColor) {
-    vertex        && (this.VertexPosition = vertex); 
-    fragmentColor && (this.FragmentColor  = fragmentColor);
+    if(vertex) this.VertexPosition = vertex; 
+    if(fragmentColor) this.FragmentColor = fragmentColor;
     this.compiledPrograms = new WeakMap();
-};
+}
 ShaderSpecification.prototype.VertexPosition = function() {    
     return [0.0,0.0,0.0,1];
-}
+};
 ShaderSpecification.prototype.FragmentColor = function() {
     return [0.5,0.5,0.5,1];
-}
+};
 ShaderSpecification.prototype.GetProgram = function (gl){
     var prog = this.compiledPrograms.get(gl);
     if(prog) return prog; 
@@ -51,10 +51,10 @@ ShaderSpecification.prototype.GetProgram = function (gl){
     
     this.compiledPrograms.set(gl, shaderProgram);
     return shaderProgram;
-}
+};
 ShaderSpecification.prototype.GetProgram.exclude = true; 
 ShaderSpecification.prototype.ShaderSource = function() {    
     return js2glsl(this, this.KnownFunctionSources); 
-}
+};
 ShaderSpecification.prototype.ShaderSource.exclude = true; 
 module.exports = ShaderSpecification;

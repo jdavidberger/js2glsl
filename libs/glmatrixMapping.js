@@ -38,7 +38,7 @@ var makeInfix = function(infix, flip) {
 var makeEqualAndInfix = function(infix, flip) {
     return function(node) {
 	nodeUtils.LOG(node.arguments[0]); 
-	if(nodeUtils.isLHV(node.arguments[0]) == false) {
+	if(nodeUtils.isLHV(node.arguments[0]) === false) {
 	    node.arguments.shift();
 	    return makeInfix(infix, flip)(node); 
 	}
@@ -51,7 +51,7 @@ var makeEqualAndInfix = function(infix, flip) {
 	    operator: infix,
 	    left: node.arguments[1],
 	    right: node.arguments[2]
-	}
+	};
 
 	if(flip) {
 	    var tmp = node.left;
@@ -72,7 +72,7 @@ var makeUnary = function(op) {
 
 var makeEqualAndUnary = function(op) {
     return function(node) {
-	if(nodeUtils.isLHV(node.arguments[0]) == false) {
+	if(nodeUtils.isLHV(node.arguments[0]) === false) {
 	    node.arguments.shift();
 	    return makeUnary(infix)(node); 
 	}
@@ -84,7 +84,7 @@ var makeEqualAndUnary = function(op) {
 	    type: "UnaryExpression",
 	    operator: op,
 	    argument: node.arguments[1]
-	}
+	};
     };
 };
 
@@ -92,21 +92,21 @@ var makeRawSrc = function(src) {
     return function(node) {
 	node.type = 'rawSource';
 	node.src = src;
-    }
+    };
 };
 
 function makeClone(baseType) { 
     return function(i) {
 	var ns = baseType + i; 
 	return new KnownFunction(ns + ".clone", [ns], ns, identity); 
-    }
+    };
 }
 
 function makeCopy(baseType) { 
     return function(i) {
 	var ns = baseType + i; 
 	return new KnownFunction(ns + ".copy", [ns, ns], ns, makeInfix("=")); 
-    }
+    };
 }
 
 function makeCreate(baseType) { 
@@ -114,7 +114,7 @@ function makeCreate(baseType) {
 	var ns = baseType + i; 
 	var init = (baseType == 'mat') ? 1 : 0;
 	return new KnownFunction(ns + ".create", [], ns, makeRawSrc(ns + "("+init+")")); 
-    }
+    };
 }
 
 function makeMul(name) {
@@ -122,21 +122,21 @@ function makeMul(name) {
 	return function(i) {
 	    var ns = baseType + i; 
 	    return new KnownFunction(ns + "." + name, [ns, ns, ns], ns, makeEqualAndInfix("*") ); 
-	}
-    }
+	};
+    };
 }
 
 
 function makeDiv(name) {
     return function(ns) {
 	return new KnownFunction(ns + "." + name, [ns, ns, ns], ns, makeEqualAndInfix("/") ); 
-    }
+    };
 }
 
 function makeSub(name) {
     return function(ns) {
 	return new KnownFunction(ns + "." + name, [ns, ns, ns], ns, makeEqualAndInfix("-") ); 
-    }
+    };
 }
 
 function makeAdd(ns) { 
@@ -164,17 +164,17 @@ function makeTransformMat(matDim){
 	    return new KnownFunction(ns + ".transformMat" + i, [ns, ns, 'mat' + i], ns, makeEqualAndInfix("*", true) ); 
 	else if(i < matDim)
 	    return new KnownFunction(ns + "_transformMat" + matDim, [ns, ns, 'mat' + matDim], ns, function(node) {
-		if(nodeUtils.isLHV(node.arguments[0]) == false)
+		if(nodeUtils.isLHV(node.arguments[0]) === false)
 		    node.arguments.shift();
 		return node;
 	    });
-    }
+    };
 }
 
 function makeDist(name) {
     return function (ns) { 
 	return new KnownFunction(ns + "." + name, [ns, ns], 'float', renameFunction('distance') ); 
-    }
+    };
 }
 
 var renameFunction = function(newName) {
@@ -190,7 +190,7 @@ var renameFunction = function(newName) {
 
 var makeEqualAndRenameFunction = function(to) {
     return function(node) {
-	if(nodeUtils.isLHV(node.arguments[0]) == false) {
+	if(nodeUtils.isLHV(node.arguments[0]) === false) {
 	    node.arguments.shift();
 	    return renameFunction(to)(node); 
 	}
@@ -202,7 +202,7 @@ var makeEqualAndRenameFunction = function(to) {
 	    type: "CallExpression",
 	    callee: node.callee,
 	    arguments:  node.arguments, 
-	}
+	};
 	renameFunction(to)(node.right);
     };
 };
@@ -217,7 +217,7 @@ function renameWithFirstOut(from, args, rtn, to) {
 	for(var i = 0;i < args.length;i++)
 	    argsT[i] = args[i] == 'T' ? ns : rtn; 
 	return new KnownFunction(ns + "." + from, argsT, rtnT, makeEqualAndRenameFunction(to) ); 
-    }
+    };
 }
 
 function rename(from, args, rtn, to) {
@@ -230,7 +230,7 @@ function rename(from, args, rtn, to) {
 	for(var i = 0;i < args.length;i++)
 	    argsT[i] = args[i] == 'T' ? ns : rtn; 
 	return new KnownFunction(ns + "." + from, argsT, rtnT, renameFunction(to) ); 
-    }
+    };
 }
 
 var vectorAndMatrixFunctions = [

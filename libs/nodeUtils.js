@@ -15,13 +15,14 @@ var LOG = console.log.bind(console);
 */
 function setDataType(node, dataType, singleNode) {    
     var rewrite = require('./rewrite'); 	    
+
+    // Remove the 'guess' annotation
+    function rawType(dt) {
+        return dt.replace("/*?*/","");
+    }
     
     // If the node already has a dataType, we are just checking for equivalence
     if(node.dataType) {
-        // Remove the 'guess' annotation
-        function rawType(dt) {
-            return dt.replace("/*?*/","");
-        }
         if(rawType(node.dataType) != rawType(dataType)) {  
             throw new Error("Type inference failed for '" + rewrite(node) + "'. Resolved as both " + node.dataType + " and now " + dataType);
         }
@@ -40,7 +41,7 @@ function setDataType(node, dataType, singleNode) {
             return [node];
         }        
     }
-};
+}
 
 /** 
     Makes nodeA and nodeB share a type. 
@@ -51,7 +52,7 @@ function syncDataType(nodeA, nodeB, msg) {
     if(nodeA.dataType !== undefined) {
         changed = setDataType(nodeB, nodeA.dataType);
     }
-    if(nodeB.dataType !== undefined && changed.length == 0) {
+    if(nodeB.dataType !== undefined && changed.length === 0) {
         changed = setDataType(nodeA, nodeB.dataType);
     }
     msg = msg || "<unmarked reason>"; 
@@ -76,7 +77,7 @@ function replaceNode(replaceThis, withThis) {
         temp[member] = replaceThis[member]; 
         replaceThis[member] = undefined; 
     }
-    for(var member in withThis) {
+    for(member in withThis) {
         replaceThis[member] = withThis[member]; 
     }    
     linkParents(replaceThis); 
@@ -89,7 +90,8 @@ function getRoot(astNode) {
         
     if(astNode.parent === undefined)
         return astNode;
-    return astNode.__root = getRoot(astNode.parent); 
+    astNode.__root = getRoot(astNode.parent); 
+    return astNode.__root; 
 }
 
 function getChildren(astNode) {    
@@ -101,7 +103,7 @@ function getChildren(astNode) {
         case 'FunctionDeclaration':
             var lst; 
             if(astNode.body.length !== undefined)
-                lst = astNode.body
+                lst = astNode.body;
             else 
                 lst = [astNode.body]; 
             lst = lst.concat([astNode.id]); 
@@ -110,7 +112,7 @@ function getChildren(astNode) {
             return lst;
         case 'ReturnStatement': 
         case 'UnaryExpression':        
-            return astNode.argument == undefined ? [] : [ astNode.argument ]; 
+            return astNode.argument === undefined ? [] : [ astNode.argument ]; 
         case 'MemberExpression': return [ astNode.object, astNode.property ] ; 
         case 'VariableDeclaration': return astNode.declarations; 
         case 'VariableDeclarator': 
@@ -147,7 +149,6 @@ function getChildren(astNode) {
     if(astNode.properties) return astNode.properties; 
     
     throw new Error("Unrecognized type defined for " + astNode.type + " -- " + astNode.toString() );             
-    return []; 
 }
 
 function getAllDescendants(ast) {
@@ -210,14 +211,14 @@ function getNodesWithIdInScope(astNode, id) {
         scope = getRoot(astNode); 
     }
     return _.filter( getAllDescendants(scope), function(node) {
-	/*var isDerivativeId =
-	    node.parent != undefined &&
+	var isDerivativeId =
+	    node.parent !== undefined &&
 	    node.parent.type == "MemberExpression" && 
-	    node.parent.property == node; 
-	*/
+	    node.parent.property == node &&
+	    node.parent.computed == false; 
+	
         return node.type == 'Identifier' && 
-	    node.name == id 
-	    //&& isDerivativeId == false;
+	    node.name == id && isDerivativeId == false;
     });
 }
 

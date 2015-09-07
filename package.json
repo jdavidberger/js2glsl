@@ -27,6 +27,8 @@
   },
   "devDependencies": {
     "gl-shader": "^4.0.5",
+    "gulp-jshint": "^1.11.2",
+    "jshint": "^2.8.0",
     "mocha": "^2.2.5",
     "unit.js": "^2.0.0"
   }

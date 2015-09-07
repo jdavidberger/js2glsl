@@ -26,7 +26,7 @@ function fixMatrixIndices(astNode) {
 	    type: 'Literal',
 	    value: secondIdx,
 	    raw: "" + secondIdx
-	}
+	};
 
     } else {
 	var idxVar = rewrite(astNode.property);
@@ -51,21 +51,28 @@ function fixMatrixIndices(astNode) {
 }
 
 function rewrite(astNode, tabs) {
+    function handleChildren(delim) {
+        return _.map(nodeUtils.getChildren(astNode), function(c) { return rewrite(c, tabs + 1); } ).join(delim); 
+    }
+    function handleBody() {
+        return [tabString + "{", handleChildren("\n"), tabString + "}" ].join("\n"); 
+    }
+
     if(tabs === undefined)
         tabs = 0; 
+
     var tabString = " ".repeat(tabs * 8);         
     try {
-        function handleChildren(delim) {
-            return _.map(nodeUtils.getChildren(astNode), function(c) { return rewrite(c, tabs + 1); } ).join(delim); 
-        };
-        function handleBody() {
-            return [tabString + "{", handleChildren("\n"), tabString + "}" ].join("\n"); 
-        };
-        if(astNode.left != undefined && astNode.right != undefined && astNode.operator != undefined) {
-	    if(astNode.operator == "%")
-		return "mod("+rewrite(astNode.left) + ", " + rewrite(astNode.right) + ")";	    
-	    var useParans = astNode.operator != '=';
-	    var statement = rewrite(astNode.left) + " " + astNode.operator + " " + rewrite(astNode.right);
+        if(astNode.left !== undefined && astNode.right !== undefined && astNode.operator !== undefined) {
+	    var operator = astNode.operator;
+	    
+	    if(operator == "%")
+		return "mod("+rewrite(astNode.left) + ", " + rewrite(astNode.right) + ")";	    	    
+
+	    if(operator.length === 3)
+		operator = operator.slice(0, 2); 
+	    var useParans = operator != '=';
+	    var statement = rewrite(astNode.left) + " " + operator + " " + rewrite(astNode.right);
 	    if(useParans)
 		statement = "(" + statement + ")"; 
 	    return statement; 
@@ -85,8 +92,8 @@ function rewrite(astNode, tabs) {
 		var objDataType = astNode.object.name && nodeUtils.getDataTypeForId(astNode, astNode.object.name); 
 		var propertyDataType = nodeUtils.getDataType(astNode);
 		var parentIsComputedMember = astNode.parent && astNode.parent.type == "MemberExpression" && astNode.parent.computed; 
-		if(objDataType && objDataType.indexOf("mat") == 0 && 
-		   propertyDataType.indexOf("float") == 0 && !parentIsComputedMember) {
+		if(objDataType && objDataType.indexOf("mat") === 0 && 
+		   propertyDataType.indexOf("float") === 0 && !parentIsComputedMember) {
 		    prepend = fixMatrixIndices(astNode); 
 		}
                 return prepend + rewrite(astNode.object) + "[" + rewrite(astNode.property) + "]"; 
@@ -143,7 +150,7 @@ function rewrite(astNode, tabs) {
         LOG(astNode);
         throw e;         
     }
-};
+}
 
 function rewriteFunctionAs(functionAst, newName) {
     var returnType = "void";
@@ -153,7 +160,7 @@ function rewriteFunctionAs(functionAst, newName) {
         returnType + " " + newName + " ()",
         _.map( [functionAst.body], rewrite).join("\n"),         
         ].join('\n');     
-};
+}
 function removeMemberRoot(ast, idNode, prefix) {
     if(idNode === undefined)
         return; 
@@ -180,7 +187,7 @@ function removeMemberRoot(ast, idNode, prefix) {
 */
 rewrite.normalizeFunctionDeclaration = function(funSrc, newName) {
     newName = newName || "_fun";    
-    var matchFunction = /(function)\W*[A-Za-z0-9_]*\W*(\([\s\S]*)/g.exec(funSrc)
+    var matchFunction = /(function)\W*[A-Za-z0-9_]*\W*(\([\s\S]*)/g.exec(funSrc);
     if(matchFunction) {
         return  "function " + newName + matchFunction[2]; 
     } else {
@@ -195,7 +202,7 @@ rewrite.normalizeFunctionExpressions = function(allAst) {
      })
      .each( function(n) {
         var p = n; 
-        while(p != undefined && p.body === undefined) {
+        while(p !== undefined && p.body === undefined) {
             p = p.parent; 
         }
         p.body.push( {
@@ -211,7 +218,7 @@ rewrite.normalizeFunctionExpressions = function(allAst) {
 
     _.chain( nodeUtils.getAllNodes(allAst) )
      .each( function(n) {
-        if ((n.type == "AssignmentExpression" && n.right && n.right.type == "FunctionExpression") == false) {
+        if ((n.type == "AssignmentExpression" && n.right && n.right.type == "FunctionExpression") === false) {
             return; 
         }
         var oldVarNode = _.chain( nodeUtils.getNodesWithIdInScope(n, n.left.name) )
@@ -224,7 +231,7 @@ rewrite.normalizeFunctionExpressions = function(allAst) {
             oldVarNode.type = "";
 
         var p = n; 
-        while(p != undefined && p.body === undefined) {
+        while(p !== undefined && p.body === undefined) {
             p = p.parent; 
         }
         p.body.push( {
@@ -240,7 +247,7 @@ rewrite.normalizeFunctionExpressions = function(allAst) {
      
      
      nodeUtils.linkParents(allAst);    
-}
+};
 
 rewrite.addIdPrefix = function(node, prefix) {
     _.chain(nodeUtils.getNodesWithIdInScope(node, node))
@@ -251,12 +258,12 @@ rewrite.addIdPrefix = function(node, prefix) {
 rewrite.removeIdPrefix = function(node, prefix) {    
     _.chain(nodeUtils.getAllNodes(node))
         .filter(function(node) {
-            return node.name !== undefined && node.name.indexOf(prefix) == 0; 
+            return node.name !== undefined && node.name.indexOf(prefix) === 0; 
         }).each(function(node) {
             var newName = node.name.slice( prefix.length );
             node.name = newName;
         });
-}
+};
 
 rewrite.rewriteFunctionAs = rewriteFunctionAs;
 rewrite.removeMemberRoot = removeMemberRoot;
@@ -281,6 +288,6 @@ rewrite.retargetReturns = function (ast, declarationName) {
             };
         node.argument = undefined; 
     }).length;
-}
+};
 
 module.exports = rewrite;

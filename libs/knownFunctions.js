@@ -24,7 +24,7 @@ var markType  = function(node) {
 var castTypeInference = function(node) {
     var dataType = node.arguments[0].value;
     return nodeUtils.setDataType(node, dataType).concat(nodeUtils.setDataType(node.arguments[1], dataType));
-}
+};
 
 var makeInfix = function(infix) {
     return function(node) {
@@ -39,20 +39,21 @@ var makeInfix = function(infix) {
 function MemberFunction( name, fn ) {
     this.name = name;
     this.fn = fn; 
-};
+}
+
 function Shared(name, args, rtn) {
     KnownFunction.call(this, "Math."+name, args, rtn, renameFunction(name));
-};
+}
 
 var knownFunctions = [
     { name: "builtIns.asType", inferTypes: castTypeInference, transform: markType, toString: function() { return 'builtIns.asType(<any>, string)';} },
     new KnownFunction("Math.atan2", ['float','float'], 'float', renameFunction("atan") ),
 ].concat(WebGL.MetaBuiltins.map( function(f) {
-    return new KnownFunction( "builtIns." + f.name, f.argTypes, f.rtnType, renameFunction(f.name) )
+    return new KnownFunction( "builtIns." + f.name, f.argTypes, f.rtnType, renameFunction(f.name) );
 })).concat(WebGL.MetaBuiltins.filter( function(f) {    
     return f.constructor.name == "Shared";
 }).map(function(f) {
-    return new KnownFunction( "Math." + f.name, f.argTypes, f.rtnType, renameFunction(f.name) )
+    return new KnownFunction( "Math." + f.name, f.argTypes, f.rtnType, renameFunction(f.name) );
 })).concat( glMatrixMapping ).filter(function(n) { return n !== undefined; }); 
 
 var knownFunctionLookup = {};
@@ -82,7 +83,7 @@ function getKnownFunction(node) {
         return candidates[0];
     
     //throw new Error("Overloaded functions by type are not yet implemented -- " + fName); 
-};
+}
 
 function remapFunctions( ast, _this ) {
     
@@ -97,16 +98,16 @@ function remapFunctions( ast, _this ) {
             rewriteFunction.transform(node); 
         else if(nodeUtils.getFunctionByName(ast, funName) !== undefined)
             return;     
-        else if( _this && _this[ rewrite(node.callee) ] != undefined) 
+        else if( _this && _this[ rewrite(node.callee) ] !== undefined) 
             return; 
         else if(rewriteFunction === undefined)
             node.error = new Error("Currently functions must be on a white list to be acceptable. " + rewrite(node.callee)   + " isn't on it.\n" +
-                                   "Available are: " + _.map(knownFunctions, function(x) { return x.toString() }).join(",\r\n") + "."  );
+                                   "Available are: " + _.map(knownFunctions, function(x) { return x.toString(); }).join(",\r\n") + "."  );
     });
-};
+}
 
 module.exports = {
     remap: remapFunctions,
     getKnownFunction: getKnownFunction,
     MemberFunction: MemberFunction
-}
+};

@@ -7,10 +7,11 @@ function KnownFunction( name, argTypes, rtnType, transform, src ) {
     this.argTypes = argTypes || [ "float" ];
     this.transform = transform; 
     this.src = src;
-};
+}
+
 KnownFunction.prototype.toString = function() {
     return this.name + "(" + this.argTypes.join(",") + ")";
-}
+};
 
 KnownFunction.prototype.inferTypes = function(node) {
     var rtn = nodeUtils.setDataType(node, this.rtnType);
@@ -20,6 +21,6 @@ KnownFunction.prototype.inferTypes = function(node) {
     for(var i = 0;i < this.argTypes.length;i++) 
         rtn = rtn.concat(nodeUtils.setDataType(node.arguments[i], this.argTypes[i]));
     return rtn;
-}
+};
 
 module.exports = KnownFunction;

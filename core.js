@@ -17,12 +17,12 @@ function gatherObjectProperties(ast, idNode) {
     var nodes = nodeUtils.getAllNodes(ast);
     
     return _.chain(nodes)
-            .filter(function(node) {
-                return node.type == "MemberExpression" && node.object.name == id; 
-            })
-            .map(function(node) {
-                return node.property.name; 
-            }).uniq().value();
+        .filter(function(node) {
+            return node.type == "MemberExpression" && node.object.name == id; 
+        })
+        .map(function(node) {
+            return node.property.name; 
+        }).uniq().value();
 }
 function generateFields(rootNode, fieldType, obj, prefix) {
     if(prefix === undefined)
@@ -34,7 +34,7 @@ function generateFields(rootNode, fieldType, obj, prefix) {
             type = "float";
         return fieldType + " " + type + " " + prefix + name + ";";
     }).join('\n').trim();
-};
+}
 
 function replaceAllIds(ast, oldName, newName) {
     _.chain(nodeUtils.getAllNodes(ast)).filter(function( node ) {
@@ -99,10 +99,10 @@ function deobjectify(ast, name) {
                 throw new Error(name + " is assigned a " + right.type + ". It must be an object.");                            
         }        
         return true; 
-    }; 
+    } 
     
     while(change) {
-        change = false; 
+        change = false; 	
         cnodes.each(function(node) {
             switch(node.type) {
                 case 'VariableDeclarator':
@@ -114,7 +114,7 @@ function deobjectify(ast, name) {
             }
         });
     }
-};
+}
 
 function deModularize(ast) {
     if( ast.type == "Program") {
@@ -134,26 +134,26 @@ function deModularize(ast) {
     
 function getUsedFunctions(node, alreadySeen) {
     if(node === undefined)
-	return [];
+    return [];
     return _.chain(nodeUtils.getAllDescendants(node)).filter(function (n) {
         return n.type == "CallExpression"; 
     }).map(function(n) {
         return rewrite(n.callee);
     }).value(); 
-};
+}
 
 function renameFunctionCallSites(node, oldName, newName) {
     if(node === undefined)
-	return;
+    return;
 
     _.chain(nodeUtils.getAllDescendants(node)).filter(function (n) {
         return n.type == "CallExpression" && rewrite(n.callee) == oldName; 
     }).each(function(n) {
-	n.callee = {
-	    parent: n,
-	    type: 'Identifier',
-	    name: newName
-	};
+    n.callee = {
+        parent: n,
+        type: 'Identifier',
+        name: newName
+    };
     });
 }
 
@@ -161,34 +161,34 @@ var stdlib = _.extend({}, glmatrixStdLib);
 
 function addFunctionAndCallees(allAst, obj, funcName) {
     if(allAst.children[funcName])
-	return;
+    return;
     if(typeof obj[funcName] != 'function')
-	return; 
+    return; 
 
     function addFunction(fn, funcName) {
-	var funcName = funcName || fn.name; 
-	var parseTree = typeof fn == 'function' ? 
-	    esprima.parse( rewrite.normalizeFunctionDeclaration(fn.toString(),funcName)) :
-	    fn;
+    funcName = funcName || fn.name; 
+    var parseTree = typeof fn == 'function' ? 
+        esprima.parse( rewrite.normalizeFunctionDeclaration(fn.toString(),funcName)) :
+        fn;
 
-	parseTree = parseTree.body[0]; // Strip off program root
-	allAst.children[funcName] = parseTree;
-	allAst.body.push(parseTree);
-	return parseTree;
+    parseTree = parseTree.body[0]; // Strip off program root
+    allAst.children[funcName] = parseTree;
+    allAst.body.push(parseTree);
+    return parseTree;
     }
 
     var parseTree = addFunction(obj[funcName], funcName);
     var functions = getUsedFunctions(parseTree); 
-    functions.forEach(function(n) { 	
-	if(n.indexOf("this.") == 0) {
-	    n = n.slice("this.".length); 
-	    addFunctionAndCallees(allAst, obj, n); 
-	} else if(stdlib[n]){
-	    var name = n.replace(".", "_"); 
-	    for(var i = 0;i < stdlib[n].length;i++)
-		addFunction(stdlib[n][i], name);
-	    renameFunctionCallSites(allAst, n, name);
-	}	
+    functions.forEach(function(n) {     
+    if(n.indexOf("this.") === 0) {
+        n = n.slice("this.".length); 
+        addFunctionAndCallees(allAst, obj, n); 
+    } else if(stdlib[n]){
+        var name = n.replace(".", "_"); 
+        for(var i = 0;i < stdlib[n].length;i++)
+        addFunction(stdlib[n][i], name);
+        renameFunctionCallSites(allAst, n, name);
+    }    
     });
 }
 
@@ -199,9 +199,9 @@ function getSource(allAst) {
             var obj = allAst;
             allAst = { body: [], children: {} };
 
-	addFunctionAndCallees(allAst, obj, 'VertexPosition');
-	addFunctionAndCallees(allAst, obj, 'FragmentColor');
-	addFunctionAndCallees(allAst, obj, 'PointSize');
+    addFunctionAndCallees(allAst, obj, 'VertexPosition');
+    addFunctionAndCallees(allAst, obj, 'FragmentColor');
+    addFunctionAndCallees(allAst, obj, 'PointSize');
 
         // Remove 'this.' expressions
         rewrite.removeMemberRoot(allAst, "this");           
@@ -248,7 +248,7 @@ function getSource(allAst) {
    // The color ast is allowed to return nothing and this means we do a discard. 
     _.chain(nodeUtils.getAllNodes(glColorAst))
      .filter(function(node) {        
-        return node.type == "ReturnStatement" && node.argument == null; 
+        return node.type == "ReturnStatement" && node.argument === null; 
      }).each(function(node) {
         var targetDatatype = glColorAst.id.dataType; 
         var returnLength  = /vec([0-9]*)/.exec(targetDatatype)[1];
@@ -300,7 +300,7 @@ function getSource(allAst) {
     var glPointSizeAst = getFunctionByName('PointSize')[0];
     var pointSizeLine = "";
     if(glPointSizeAst) {
-	pointSizeLine = "\tgl_PointSize = PointSize();";
+    pointSizeLine = "\tgl_PointSize = PointSize();";
     }
 
     function getFunctionByName(name) {
@@ -308,8 +308,8 @@ function getSource(allAst) {
     }
     
     function getUsedFunctions(node, alreadySeen) {
-	if(node === undefined)
-	    return [];
+    if(node === undefined)
+        return [];
 
         alreadySeen = alreadySeen || {};
         alreadySeen[node.id.name] = 1; 
@@ -325,51 +325,51 @@ function getSource(allAst) {
             if(!alreadySeen[callName]) {
                 var foundFunctions =  getFunctionByName(callName);
                 if(foundFunctions) {
-		    for(var j = 0;j < foundFunctions.length;j++)
-			rtn = getUsedFunctions(foundFunctions[j], alreadySeen ).concat(rtn);
+            for(var j = 0;j < foundFunctions.length;j++)
+            rtn = getUsedFunctions(foundFunctions[j], alreadySeen ).concat(rtn);
                 } 
             }
         }
         return rtn;
-    };
+    }
         
     var usedFunctions = 
-	getUsedFunctions(glPositionAst)
-	.concat(getUsedFunctions(glColorAst)); 
+    getUsedFunctions(glPositionAst)
+    .concat(getUsedFunctions(glColorAst)); 
 
     // Gather all used names in the program
     var usedNames = {};    
     _.each(nodeUtils.getAllNodes(allAst), function(node) {
-	if(node.id) {
-	    usedNames[node.id] = true; 
-	}
+    if(node.id) {
+        usedNames[node.id] = true; 
+    }
     });
 
     // Strip out _local from variables that don't strictly need it
     _.each(usedFunctions, function(func) {
-	var variableDecls = nodeUtils.getAllNodes(func).filter(nodeUtils.hasType("VariableDeclarator"));
-	var prefix = "_local";
-	_.each(variableDecls, function(decl) {
-	    if(decl.id.name.indexOf(prefix) == 0){
-		var newName = decl.id.name.slice(prefix.length);
-		if(usedNames[newName] === undefined) {
-		    var sites = nodeUtils.getNodesWithIdInScope(func, decl.id);
-		    _.each(sites, function(n) {
-			n.name = newName;
-		    }); 
-		}
-	    }
-	});
+    var variableDecls = nodeUtils.getAllNodes(func).filter(nodeUtils.hasType("VariableDeclarator"));
+    var prefix = "_local";
+    _.each(variableDecls, function(decl) {
+        if(decl.id.name.indexOf(prefix) === 0){
+        var newName = decl.id.name.slice(prefix.length);
+        if(usedNames[newName] === undefined) {
+            var sites = nodeUtils.getNodesWithIdInScope(func, decl.id);
+            _.each(sites, function(n) {
+            n.name = newName;
+            }); 
+        }
+        }
+    });
     });
     
     // Make sure that if any of the used functions have an error; we throw the exception here. 
     usedFunctions
-	.forEach( function(node) {
+    .forEach( function(node) {
             nodeUtils.getAllDescendants(node).forEach(function(node) {
-		if(node.error)
+        if(node.error)
                     throw node.error;
             });
-	}); 
+    }); 
     
     var vertex = [
         "precision mediump float;",        
@@ -381,7 +381,7 @@ function getSource(allAst) {
         _.uniq(getUsedFunctions(glPositionAst).concat(getUsedFunctions(glPointSizeAst))).map(rewrite).join("\n"),                      
         "void main() {",        
         positionLine,
-	pointSizeLine,
+        pointSizeLine,
         "}", 
       ].join('\n'); 
 
@@ -403,6 +403,6 @@ function getSource(allAst) {
         vertex: vertex,
         fragment: fragment
     };        
-};
+}
 
 module.exports = getSource;

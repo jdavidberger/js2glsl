@@ -8,11 +8,11 @@ function Builtin(name, fn, argTypes, rtnType) {
     this.rtnType = rtnType || "float";
     this.argTypes = argTypes || [ "float" ];  
     this.fn = fn;
-};
+}
 
 function Shared(name, argTypes, rtnType) {
     Builtin.call(this, name, Math[name], argTypes, rtnType);
-};
+}
 
 
 function mod(a, b) { return a % b; }
