@@ -1,6 +1,6 @@
 {
   "name": "js2glsl",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "An api which transpiles a subset of JS into GLSL",
   "main": "js2glsl.js",
   "scripts": {
