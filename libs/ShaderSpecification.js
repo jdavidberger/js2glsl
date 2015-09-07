@@ -21,7 +21,6 @@ ShaderSpecification.prototype.VertexPosition = function() {
 ShaderSpecification.prototype.FragmentColor = function() {
     return [0.5,0.5,0.5,1];
 }
-ShaderSpecification.prototype.KnownFunctionSources = knownFunctions.knownFunctionsSource; 
 ShaderSpecification.prototype.GetProgram = function (gl){
     var prog = this.compiledPrograms.get(gl);
     if(prog) return prog; 

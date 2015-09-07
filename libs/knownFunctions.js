@@ -20,6 +20,7 @@ var markType  = function(node) {
     node.expressions = [ node.arguments[1] ];
     node.arguments = node.callee = undefined; 
 };
+
 var castTypeInference = function(node) {
     var dataType = node.arguments[0].value;
     return nodeUtils.setDataType(node, dataType).concat(nodeUtils.setDataType(node.arguments[1], dataType));
@@ -44,12 +45,7 @@ function Shared(name, args, rtn) {
 };
 
 var knownFunctions = [
-    { name: "builtIns.asType", inferTypes: castTypeInference, transform: markType, toString: function() { return 'builtIns.asType(<any>, <type>)';} },
-    new KnownFunction("mat4.multiplyVec3", ['mat4', 'vec3'], 'vec3', renameFunction("_mat4_multiplyVec3" )),
-    new KnownFunction("vec3.scale", ['vec3', 'float'], 'vec3', makeInfix("*") ),   
-    new KnownFunction("vec2", ['float','float'], 'vec2' ),
-    new KnownFunction("vec3", ['float','float','float'], 'vec3' ),
-    new KnownFunction("vec4", ['float','float','float','float'], 'vec4' ),
+    { name: "builtIns.asType", inferTypes: castTypeInference, transform: markType, toString: function() { return 'builtIns.asType(<any>, string)';} },
     new KnownFunction("Math.atan2", ['float','float'], 'float', renameFunction("atan") ),
 ].concat(WebGL.MetaBuiltins.map( function(f) {
     return new KnownFunction( "builtIns." + f.name, f.argTypes, f.rtnType, renameFunction(f.name) )
@@ -57,10 +53,13 @@ var knownFunctions = [
     return f.constructor.name == "Shared";
 }).map(function(f) {
     return new KnownFunction( "Math." + f.name, f.argTypes, f.rtnType, renameFunction(f.name) )
-})).concat( glMatrixMapping );
+})).concat( glMatrixMapping ).filter(function(n) { return n !== undefined; }); 
 
 var knownFunctionLookup = {};
 for(var i = 0;i < knownFunctions.length;i++) {
+    if(knownFunctions[i] === undefined)
+	continue; 
+
     if(knownFunctionLookup[knownFunctions[i].name] === undefined ) {
        knownFunctionLookup[knownFunctions[i].name] = []; 
     }
@@ -87,18 +86,19 @@ function getKnownFunction(node) {
 
 function remapFunctions( ast, _this ) {
     
-    _.chain(nodeUtils.getAllNodes(ast)).filter(function(node) {
-        return node.type == 'CallExpression';
-    }).each(function( node ) {        
+    _.chain(nodeUtils.getAllNodes(ast)).each(function(node) {
+        if (node.type != 'CallExpression') 
+	    return; 
+
         var funName = rewrite(node.callee); 
-        if(nodeUtils.getFunctionByName(ast, funName) !== undefined)
-            return;     
-        if( _this && _this[ rewrite(node.callee) ] != undefined) 
-            return; 
             
         var rewriteFunction = getKnownFunction(node);
         if(rewriteFunction && rewriteFunction.transform) // No transform function means its fine as-is
             rewriteFunction.transform(node); 
+        else if(nodeUtils.getFunctionByName(ast, funName) !== undefined)
+            return;     
+        else if( _this && _this[ rewrite(node.callee) ] != undefined) 
+            return; 
         else if(rewriteFunction === undefined)
             node.error = new Error("Currently functions must be on a white list to be acceptable. " + rewrite(node.callee)   + " isn't on it.\n" +
                                    "Available are: " + _.map(knownFunctions, function(x) { return x.toString() }).join(",\r\n") + "."  );
@@ -108,6 +108,5 @@ function remapFunctions( ast, _this ) {
 module.exports = {
     remap: remapFunctions,
     getKnownFunction: getKnownFunction,
-    knownFunctionsSource: knownFunctionsSource,
     MemberFunction: MemberFunction
 }

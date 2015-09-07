@@ -24,6 +24,7 @@ function texture2D(tex, coord) {
 function clamp(value, low, high) {
       return Math.max(low, Math.min(value, high));
 }
+function identity(v) { return v; }
 
 var builtins = [
     new Shared("sin"), new Shared("cos"), new Shared("tan"), new Shared("asin"),
@@ -33,6 +34,8 @@ var builtins = [
     new Shared("pow", [ "float", "float" ]), 
     new Shared("min", [ "float", "float" ]), 
     new Shared("max", [ "float", "float" ]),
+    new Builtin("float", identity, ["int"], "float"),
+    new Builtin("int", identity, ["float"], "int"),
     new Builtin("atan", Math.atan2, [ "float", "float" ]),
     new Builtin("texture2D", texture2D, [ 'sampler2D', 'vec2' ], 'vec4'),
     new Builtin("mod", mod, [ 'float', 'float' ], 'float'),

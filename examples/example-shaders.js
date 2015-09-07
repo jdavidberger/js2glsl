@@ -30,9 +30,9 @@ readmeEx2.getUV = function() {
 };
 readmeEx2.VertexPosition = function () {
     this.varyings.uv =  this.getUV();
-    return vec3(this.attributes.position[0],
-                this.attributes.position[1],
-                this.attributes.position[2]); 
+    return [this.attributes.position[0],
+            this.attributes.position[1],
+            this.attributes.position[2]]; 
 };
 readmeEx2.FragmentColor = function () {
     return [0.5*(this.varyings.uv[0]+1.0), 
@@ -43,9 +43,9 @@ readmeEx2.FragmentColor = function () {
 function readmeEx1_VertexPosition() {
             varyings.uv =  [attributes.position[0],
                             attributes.position[1]];
-            return vec3(attributes.position[0],
-                        attributes.position[1],
-                        attributes.position[2]); 
+    return [attributes.position[0],
+            attributes.position[1],
+            attributes.position[2]]; 
 };
 
 function readmeEx1_FragmentColor() {
@@ -63,7 +63,7 @@ module.exports = {
         function () {
             var position = this.attributes.position; 
             this.varyings.uv = [position[0], position[1]];
-            return vec3(position[0], position[1], position[2]); 
+            return [position[0], position[1], position[2]]; 
         },
         function () {
             var uv = this.varyings.uv; 
@@ -75,9 +75,9 @@ module.exports = {
         function () {
             var position = this.attributes.position; 
             this.varyings.uv = [position[0], position[1]];
-            return vec3(position[0] * Math.cos(this.uniforms.t),
-                        position[1] * Math.sin(this.uniforms.t), 
-                        position[2]); 
+            return [position[0] * Math.cos(this.uniforms.t),
+                    position[1] * Math.sin(this.uniforms.t), 
+                    position[2]]; 
         },
         function () {
             var uv = this.varyings.uv; 
@@ -96,8 +96,8 @@ module.exports = {
     ),
     standardShader: new js2glsl.ShaderSpecification(
         function() {
-            this.varyings.vcolor = vec3.scale(this.attributes.color, this.uniforms.brightness);
-            return mat4.multiplyVec3(this.uniforms.tx, this.attributes.point);    
+            this.varyings.vcolor = vec3.scale([0,0,0], this.attributes.color, this.uniforms.brightness);
+            return vec3.transformMat4(vec3.create(), this.attributes.point, this.uniforms.tx);
         },
         function() {
             return this.varyings.vcolor;

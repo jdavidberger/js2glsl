@@ -21,26 +21,26 @@ var identity = function(node) {
     ];
 };
 
-var makeInfix = function(infix) {
+var makeInfix = function(infix, flip) {
     return function(node) {
         node.type = infix[0] = '=' ? 
 	    "AssignmentExpression" :
 	    "BinaryExpression"; 
 
         node.operator = infix;
-        node.left  = node.arguments[0]; 
-        node.right = node.arguments[1]; 
+        node.left  = node.arguments[flip ? 1 : 0]; 
+        node.right = node.arguments[flip ? 0 : 1]; 
         node.callee = node.arguments = undefined;
     };
 };
 
 
-var makeEqualAndInfix = function(infix) {
+var makeEqualAndInfix = function(infix, flip) {
     return function(node) {
 	nodeUtils.LOG(node.arguments[0]); 
 	if(nodeUtils.isLHV(node.arguments[0]) == false) {
 	    node.arguments.shift();
-	    return makeInfix(infix)(node); 
+	    return makeInfix(infix, flip)(node); 
 	}
 
         node.type = "AssignmentExpression";
@@ -51,6 +51,12 @@ var makeEqualAndInfix = function(infix) {
 	    operator: infix,
 	    left: node.arguments[1],
 	    right: node.arguments[2]
+	}
+
+	if(flip) {
+	    var tmp = node.left;
+	    node.left = node.right;
+	    node.right = tpm;
 	}
     };
 };
@@ -106,7 +112,8 @@ function makeCopy(baseType) {
 function makeCreate(baseType) { 
     return function(i) {
 	var ns = baseType + i; 
-	return new KnownFunction(ns + ".create", [], ns, makeRawSrc(ns + "(0)")); 
+	var init = (baseType == 'mat') ? 1 : 0;
+	return new KnownFunction(ns + ".create", [], ns, makeRawSrc(ns + "("+init+")")); 
     }
 }
 
@@ -149,6 +156,19 @@ function makeFromValues(ns, i) {
     for(var j = 0;j < i;j++)
 	args.push('float');
     return new KnownFunction(ns + ".fromValues", args, ns, renameFunction(ns) ); 
+}
+
+function makeTransformMat(matDim){
+    return function(ns,i) {
+	if(i == matDim)
+	    return new KnownFunction(ns + ".transformMat" + i, [ns, ns, 'mat' + i], ns, makeEqualAndInfix("*", true) ); 
+	else if(i < matDim)
+	    return new KnownFunction(ns + "_transformMat" + matDim, [ns, ns, 'mat' + matDim], ns, function(node) {
+		if(nodeUtils.isLHV(node.arguments[0]) == false)
+		    node.arguments.shift();
+		return node;
+	    });
+    }
 }
 
 function makeDist(name) {
@@ -238,7 +258,10 @@ var vectorFunctions = [
     rename('len', ['T'], 'float', 'length'),
     makeFromValues,
     renameWithFirstOut('max', ['T', 'T', 'T'], 'T'),
-    renameWithFirstOut('min', ['T', 'T', 'T'], 'T')
+    renameWithFirstOut('min', ['T', 'T', 'T'], 'T'),
+    makeTransformMat(2),
+    makeTransformMat(3),
+    makeTransformMat(4)
 ];
 
 var matrixFunctions = {
@@ -261,4 +284,13 @@ for(var fn in vectorFunctions) {
 	functions.push( fun(ns, (d+1) ) ); 
     }
 }
+
+for(var fn in matrixFunctions) {
+    var fun = matrixFunctions[fn]; 
+    for(var d = 1;d < 4;d++) {
+	var ns = 'mat' + (d+1);
+	functions.push( fun(ns, (d+1) ) ); 
+    }
+}
+
 module.exports = functions;

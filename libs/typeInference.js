@@ -63,17 +63,16 @@ function inferTypes( rootNode ) {
         var parentNode = node.parent; 
 
         /***** Push down inferences -- inferences that are based on this node, and push down to its children.  */
-
         if(node.type == 'CallExpression') {
             nodesToProcess = nodesToProcess.concat( syncDataType(node, node.callee), "CallExpression has type of called functions return" );                         }
         // For unary types, propagate down to the expression
-        else if(node.type == "UnaryExpression") {
+        else if(node.type == "UnaryExpression" || node.type == 'UpdateExpression') {
             nodesToProcess = nodesToProcess.concat( syncDataType(node.argument, node), "Unary expressions share type" ); 
         }
         else if(node.type == 'ConditionalExpression') {
             nodesToProcess = nodesToProcess.concat( syncDataType(node.alternate, node.consequent, "Ternary outcomes are equal") );               
             nodesToProcess = nodesToProcess.concat( syncDataType(node, node.consequent, "Ternary returns same type as outcomes") );
-        }
+        } 
 
         /***** Push up inferences -- inferences that are based on the parent node, and push up to that parent.  */
         if(parentNode) {
@@ -129,7 +128,7 @@ function inferTypes( rootNode ) {
                 nodesToProcess = nodesToProcess.concat( syncDataType(parentNode, parentNode.left, "binary expression parent node must equal operands") );
             }
             // For unary types, propagate up to the expression node
-            else if(parentNode.type == "UnaryExpression") {
+            else if(parentNode.type == "UnaryExpression" || parentNode.type == 'UpdateExpression') {
                 nodesToProcess = nodesToProcess.concat( syncDataType(parentNode, node, "Unary match") ); 
             }
             

@@ -1,8 +1,8 @@
 var _ = require('underscore');
 
-function LOG() {
-    console.log.apply(console, arguments); 
-};
+// var LOG = function() {}
+var LOG = console.log.bind(console);
+
 /**
     Set the data type for a give node. 
     
@@ -210,14 +210,14 @@ function getNodesWithIdInScope(astNode, id) {
         scope = getRoot(astNode); 
     }
     return _.filter( getAllDescendants(scope), function(node) {
-	var isDerivativeId =
+	/*var isDerivativeId =
 	    node.parent != undefined &&
 	    node.parent.type == "MemberExpression" && 
 	    node.parent.property == node; 
-
+	*/
         return node.type == 'Identifier' && 
-	    node.name == id && 
-	    isDerivativeId == false;
+	    node.name == id 
+	    //&& isDerivativeId == false;
     });
 }
 
@@ -227,9 +227,11 @@ function getDataTypeForId(rootNode, id) {
         var atLeast = _.chain(getNodesWithIdInScope(rootNode, id)).filter(function(n) { return n.dataTypeAtLeast; })
                                                                .map(function(n) { return n.dataTypeAtLeast; })
                                                                .max().value();
-        if(atLeast > 0) {
+        if(atLeast > 0 && atLeast < 4) {
             return "vec" + (atLeast+1);
-        }
+        } else if(atLeast > 0 && atLeast <= 16) {
+	    return "mat" + Math.sqrt(atLeast+1); 
+	}
         return "float/*?*/";
     }
     return typedNode.dataType;
@@ -259,6 +261,30 @@ function isLHV(node) {
     return false; 
 }
 
+function getStatementPosition(astNode, statement) {
+    if(astNode) {
+	if(astNode.body) {
+	    for(var i = 0;i < astNode.body.length;i++) {
+		if(astNode.body[i] == statement) {
+		    return [astNode, i];
+		}
+	    }
+	    return;
+	}
+	return getStatementPosition(astNode.parent, astNode);
+    }
+}
+
+function insertBefore(astNode, source) {
+    var blockAndIdx = getStatementPosition(astNode.parent, astNode);
+    if(source.length === undefined)
+	source = [ source ];
+    var newParent = blockAndIdx[0];
+    var newIdx = blockAndIdx[1];
+    var args = [ newIdx, 0].concat(source); 
+    newParent.body.splice.apply(newParent.body, args);
+}
+
 module.exports = {
     getAllNodes: getAllNodes,
     getChildren: getChildren,
@@ -272,5 +298,6 @@ module.exports = {
     setDataType: setDataType,
     syncDataType: syncDataType,
     isLHV: isLHV,
-    LOG: LOG
+    LOG: LOG,
+    insertBefore: insertBefore
 }

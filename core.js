@@ -1,13 +1,13 @@
 var esprima = require('esprima'); 
 var escodegen = require('escodegen'); 
 var _ = require('underscore');
-var glMatrix = require('gl-matrix');
 
 var nodeUtils = require('./libs/nodeUtils');
 var knownFunctions = require('./libs/knownFunctions');
 var rewrite = require('./libs/rewrite'); 
 var typeInference = require('./libs/typeInference'); 
 var LOG = nodeUtils.LOG;
+var glmatrixStdLib = require('./libs/glmatrixStdLib');
 
 function gatherObjectProperties(ast, idNode) {
     if(idNode === undefined)
@@ -126,7 +126,6 @@ function deModularize(ast) {
                     ast.body[i].expression.arguments.length == 1 &&
                     ast.body[i].expression.arguments[0].type == "ThisExpression") {
                 ast.body[i] = ast.body[i].expression.callee.object.body; 
-                //ast.body = ast.body.concat(ast.body[i].expression.callee.object.body); 
             }
         }
     }
@@ -158,33 +157,7 @@ function renameFunctionCallSites(node, oldName, newName) {
     });
 }
 
-var stdlib = {}; 
-function addVecFuncs(baseType) {
-    function addVecFunc(name) {	
-	var fn = glMatrix[baseType][name]; 
-	var origName = baseType + "." + name;
-	name = baseType + "_" + name; 
-	var parseTree = esprima.parse(rewrite.normalizeFunctionDeclaration(fn.toString(),name));	
-	var funBody = parseTree.body[0];
-	if(funBody.params[0] && funBody.params[0].name == 'out') {
-	    funBody.params[0].isOutParam = true;
-	    _.each(nodeUtils.getNodesWithIdInScope(parseTree, funBody.params[0]), function(node) {
-		node.name = "out_param"; 
-	    }); 
-	}
-	stdlib[origName] = parseTree;
-    }
-    addVecFunc('lerp'); 
-    addVecFunc('scaleAndAdd'); 
-    addVecFunc('squaredDistance');
-    addVecFunc('sqrDist');
-    addVecFunc('sqrLen');
-    addVecFunc('squaredLength');
-}
-
-for(var i = 2;i <= 4;i++) {
-    addVecFuncs('vec' + i);    
-}
+var stdlib = _.extend({}, glmatrixStdLib); 
 
 function addFunctionAndCallees(allAst, obj, funcName) {
     if(allAst.children[funcName])
@@ -212,13 +185,14 @@ function addFunctionAndCallees(allAst, obj, funcName) {
 	    addFunctionAndCallees(allAst, obj, n); 
 	} else if(stdlib[n]){
 	    var name = n.replace(".", "_"); 
-	    addFunction(stdlib[n], name);
+	    for(var i = 0;i < stdlib[n].length;i++)
+		addFunction(stdlib[n][i], name);
 	    renameFunctionCallSites(allAst, n, name);
 	}	
     });
 }
 
-function getSource(allAst, KnownFunctionSources) {
+function getSource(allAst) {
     if(typeof(allAst ) == 'string') {        
         return getSource(esprima.parse(allAst)); 
     } else if(typeof(allAst) == "object" && allAst.type != "Program") {
@@ -228,10 +202,10 @@ function getSource(allAst, KnownFunctionSources) {
 	addFunctionAndCallees(allAst, obj, 'VertexPosition');
 	addFunctionAndCallees(allAst, obj, 'FragmentColor');
 	addFunctionAndCallees(allAst, obj, 'PointSize');
-            // Remove 'this.' expressions
-            rewrite.removeMemberRoot(allAst, "this");           
+
+        // Remove 'this.' expressions
+        rewrite.removeMemberRoot(allAst, "this");           
     }
-    KnownFunctionSources = KnownFunctionSources || knownFunctions.knownFunctionsSource;
    
     deModularize(allAst); 
     nodeUtils.linkParents(allAst); 
@@ -291,12 +265,8 @@ function getSource(allAst, KnownFunctionSources) {
                             {
                                 "type": "ReturnStatement",
                                 "argument": {
-                                    "type": "CallExpression",
-                                    "callee": {
-                                        "type": "Identifier",
-                                        "name": targetDatatype
-                                    },
-                                    "arguments": _.map(_.range(returnLength), function () { 
+                                    "type": "ArrayExpression",
+                                    "elements": _.map(_.range(returnLength), function () { 
                                         return {
                                             "type": "Literal",
                                             "value": 0,
@@ -309,7 +279,7 @@ function getSource(allAst, KnownFunctionSources) {
             node.argument = undefined;            
      });
     
-    knownFunctions.remap(allAst, this);
+    knownFunctions.remap(allAst, this);    
     
     var positionLength  = /vec([0-9]*)/.exec(glPositionAst.id.dataType)[1];
     var positionLine = "\tgl_Position = VertexPosition(); ";
@@ -327,14 +297,14 @@ function getSource(allAst, KnownFunctionSources) {
                         ", 1.0);"; 
     }   
     
-    var glPointSizeAst = getFunctionByName('PointSize');
+    var glPointSizeAst = getFunctionByName('PointSize')[0];
     var pointSizeLine = "";
     if(glPointSizeAst) {
 	pointSizeLine = "\tgl_PointSize = PointSize();";
     }
 
     function getFunctionByName(name) {
-        return _.find(nodeUtils.getAllNodes(allAst), function(n) { return n.type == "FunctionDeclaration" && n.id.name == name; });
+        return _.filter(nodeUtils.getAllNodes(allAst), function(n) { return n.type == "FunctionDeclaration" && n.id.name == name; });
     }
     
     function getUsedFunctions(node, alreadySeen) {
@@ -348,16 +318,16 @@ function getSource(allAst, KnownFunctionSources) {
         }).map(function(n) {
             return n.callee.name; 
         }).value();
+
         var rtn = [ node ]; 
         for(var i = 0;i < callNames.length;i++) {
             var callName = callNames[i];
             if(!alreadySeen[callName]) {
-                var foundFunction =  getFunctionByName(callName);
-                if(foundFunction) {
-                    rtn = getUsedFunctions(foundFunction, alreadySeen ).concat(rtn);
-                } else if(KnownFunctionSources[callName]) {
-                    rtn = [{ type: 'rawSource', src: KnownFunctionSources[callName] }].concat(rtn);
-                }
+                var foundFunctions =  getFunctionByName(callName);
+                if(foundFunctions) {
+		    for(var j = 0;j < foundFunctions.length;j++)
+			rtn = getUsedFunctions(foundFunctions[j], alreadySeen ).concat(rtn);
+                } 
             }
         }
         return rtn;
@@ -367,14 +337,15 @@ function getSource(allAst, KnownFunctionSources) {
 	getUsedFunctions(glPositionAst)
 	.concat(getUsedFunctions(glColorAst)); 
 
-    var usedNames = {};
-    
+    // Gather all used names in the program
+    var usedNames = {};    
     _.each(nodeUtils.getAllNodes(allAst), function(node) {
 	if(node.id) {
 	    usedNames[node.id] = true; 
 	}
     });
 
+    // Strip out _local from variables that don't strictly need it
     _.each(usedFunctions, function(func) {
 	var variableDecls = nodeUtils.getAllNodes(func).filter(nodeUtils.hasType("VariableDeclarator"));
 	var prefix = "_local";
@@ -391,7 +362,7 @@ function getSource(allAst, KnownFunctionSources) {
 	});
     });
     
-
+    // Make sure that if any of the used functions have an error; we throw the exception here. 
     usedFunctions
 	.forEach( function(node) {
             nodeUtils.getAllDescendants(node).forEach(function(node) {
@@ -407,8 +378,7 @@ function getSource(allAst, KnownFunctionSources) {
         generateFields(allAst, "varying", varyings, "varyings_").trim(),
         generateFields(allAst, "uniform", uniforms).trim(),
         "",
-        getUsedFunctions(glPositionAst).map(rewrite).join("\n"),                      
-        getUsedFunctions(glPointSizeAst).map(rewrite).join("\n"),                      
+        _.uniq(getUsedFunctions(glPositionAst).concat(getUsedFunctions(glPointSizeAst))).map(rewrite).join("\n"),                      
         "void main() {",        
         positionLine,
 	pointSizeLine,
@@ -421,7 +391,7 @@ function getSource(allAst, KnownFunctionSources) {
         generateFields(allAst, "varying", varyings, "varyings_").trim(),
         generateFields(allAst, "uniform", uniforms).trim(),
         "",
-        getUsedFunctions(glColorAst).map(rewrite).join("\n"),       
+        _.uniq(getUsedFunctions(glColorAst)).map(rewrite).join("\n"),       
         "",
          "void main() {",    
          colorLine,
