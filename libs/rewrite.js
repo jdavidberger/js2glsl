@@ -67,7 +67,7 @@ function rewrite(astNode, tabs) {
 	    var operator = astNode.operator;
 
 	    if(operator == "%")
-		return "mod("+rewrite(astNode.left) + ", " + rewrite(astNode.right) + ")";
+		    return "mod("+rewrite(astNode.left) + ", " + rewrite(astNode.right) + ")";
 
 	    if(operator.length === 3)
 		operator = operator.slice(0, 2);
